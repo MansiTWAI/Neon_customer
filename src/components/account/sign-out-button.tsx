@@ -1,19 +1,17 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { api } from '@/lib/browser-api';
 
 export function SignOutButton() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function signOut() {
     setPending(true);
     await api.signOut();
-    router.replace('/');
-    router.refresh();
+    // A full load, so nothing rendered for the previous session survives in the router cache.
+    window.location.replace('/');
   }
 
   return (

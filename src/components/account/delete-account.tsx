@@ -1,13 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button, FormError } from '@/components/ui/form';
 import { ApiError } from '@/lib/api';
 import { api } from '@/lib/browser-api';
 
 export function DeleteAccount() {
-  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,8 +15,8 @@ export function DeleteAccount() {
     setError(null);
     try {
       await api.request('/auth/customer/me', { method: 'DELETE' });
-      router.replace('/');
-      router.refresh();
+      // A full load, so nothing rendered for the previous session survives in the router cache.
+      window.location.replace('/');
     } catch (err) {
       setPending(false);
       setError(err instanceof ApiError ? err.title : 'Could not close your account. Please try again.');

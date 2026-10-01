@@ -2,7 +2,6 @@
 
 import { ApiError } from '@neon-adda/shared/web/client';
 import { LoaderCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '@/lib/browser-api';
 
@@ -16,7 +15,6 @@ const inputClass =
   'w-full rounded-xl border border-white/10 bg-night-900 px-4 py-3 text-base outline-none placeholder:text-muted/60 focus:border-neon-cyan';
 
 export function PhoneSignIn({ next }: { next: string }) {
-  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [sent, setSent] = useState<OtpSent | null>(null);
   const [resendIn, setResendIn] = useState(0);
@@ -59,8 +57,8 @@ export function PhoneSignIn({ next }: { next: string }) {
         method: 'POST',
         body: JSON.stringify({ phone, code }),
       });
-      router.replace(next);
-      router.refresh();
+      // A full load, so nothing rendered for the previous session survives in the router cache.
+      window.location.replace(next);
     });
   }
 
