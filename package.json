@@ -1,0 +1,48 @@
+{
+  "name": "@neon-adda/customer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -C shared build && next dev -p 3000",
+    "build": "pnpm -C shared build && next build",
+    "start": "next start -p 3000",
+    "typecheck": "pnpm -C shared build && tsc --noEmit",
+    "test": "pnpm -C shared test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@neon-adda/shared": "workspace:*",
+    "firebase": "^12.19.0",
+    "konva": "^9.3.22",
+    "lucide-react": "^0.544.0",
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-konva": "~19.2.7",
+    "server-only": "^0.0.1",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@next/eslint-plugin-next": "^15.5.4",
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.1"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  }
+}
