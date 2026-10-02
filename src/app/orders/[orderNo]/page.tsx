@@ -48,6 +48,10 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
   const status = ORDER_STATUS[order.status];
   const { totals } = order;
   const awaitingPayment = order.status === 'PENDING_PAYMENT';
+  const payOnDelivery =
+    order.paymentMode === 'COD' &&
+    totals.duePaise > 0 &&
+    !['PENDING_PAYMENT', 'EXPIRED', 'CANCELLED'].includes(order.status);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-10">
@@ -86,17 +90,30 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
       )}
 
       {awaitingPayment && (
-        <Card className="border-amber-500/20">
-          <CardTitle>Payment</CardTitle>
-          <p className="mt-3 font-display text-2xl font-bold tabular-nums">{formatINR(totals.payNowPaise)}</p>
-          <p className="text-sm text-muted">
-            {order.paymentMode === 'ADVANCE'
-              ? `Advance now, the remaining ${formatINR(totals.totalPaise - totals.payNowPaise)} before dispatch.`
-              : 'Full amount, including GST.'}
+        <Notice tone="warning">
+          Our team will call {formatPhone(order.shippingAddress.phone)} to confirm this order before we start
+          making it.
+        </Notice>
+      )}
+      {order.installation?.completionCode && (
+        <Card className="border-neon-cyan/30">
+          <CardTitle>Installation code</CardTitle>
+          <p className="mt-3 font-mono text-3xl font-bold tracking-[0.3em] tabular-nums">
+            {order.installation.completionCode}
           </p>
-          <p className="mt-3 text-sm">
-            We will send a secure payment link to {formatPhone(order.shippingAddress.phone)}
-            {order.payBy && `. Pay by ${formatDateTime(order.payBy)} to keep your production slot`}.
+          <p className="mt-1 text-sm text-muted">
+            Once your sign is up and working, read this code out to the technician to confirm the job is done.
+            Do not share it before then.
+          </p>
+        </Card>
+      )}
+      {payOnDelivery && (
+        <Card className="border-neon-pink/20">
+          <CardTitle>Cash on delivery</CardTitle>
+          <p className="mt-3 font-display text-2xl font-bold tabular-nums">{formatINR(totals.duePaise)}</p>
+          <p className="text-sm text-muted">
+            Pay in cash or by UPI when your sign {order.installationRequired ? 'is installed' : 'arrives'}.
+            Keep the amount ready so the handover is quick.
           </p>
         </Card>
       )}
@@ -242,7 +259,11 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
                 <dd className="tabular-nums">{formatINR(totals.totalPaise)}</dd>
               </div>
               <div className="flex justify-between pt-1">
-                <dt className="text-muted">{PAYMENT_STATUS[order.paymentStatus]}</dt>
+                <dt className="text-muted">
+                  {payOnDelivery && order.paymentStatus === 'UNPAID'
+                    ? 'Pay on delivery'
+                    : PAYMENT_STATUS[order.paymentStatus]}
+                </dt>
                 <dd className="text-muted tabular-nums">
                   {totals.duePaise > 0 ? `${formatINR(totals.duePaise)} due` : 'Nothing due'}
                 </dd>

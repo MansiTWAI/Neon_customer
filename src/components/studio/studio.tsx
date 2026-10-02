@@ -8,6 +8,7 @@ import { takeHandoff } from '@/lib/studio-handoff';
 import type { StorefrontData } from '@/lib/studio-types';
 import type { DesignInput } from '@/lib/types';
 import { heightFor, useStudio } from '@/stores/studio-store';
+import { DesignAssistant } from './design-assistant';
 import { DesignControls } from './design-controls';
 import { LightSwitch } from './light-switch';
 import { LogoStudio } from './logo-studio';
@@ -209,6 +210,7 @@ function TextStudio({ data, initialText, openHandoff }: Omit<StudioProps, 'mode'
           <p className="mt-1 mb-4 text-sm text-muted">
             Priced by size. What you see is what you pay, GST included.
           </p>
+          {!offline && <DesignAssistant />}
           <DesignControls assets={assets} heightIn={heightIn} />
         </section>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { formatINR, type OrderPriceOk } from '@neon-adda/shared';
-import { MapPin, Plus, ShoppingBag, Tag, X } from 'lucide-react';
+import { Banknote, MapPin, Plus, ShoppingBag, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { AddressForm } from '@/components/account/address-form';
@@ -10,6 +10,7 @@ import { Button, FormError, Notice } from '@/components/ui/form';
 import { SignThumb } from '@/components/ui/sign-thumb';
 import { ApiError, publicRequest } from '@/lib/api';
 import { api } from '@/lib/browser-api';
+import { currentReferral } from '@/lib/referral';
 import { addressLines, formatSize } from '@/lib/format';
 import { letteringOf, type Address, type CheckoutPrice } from '@/lib/types';
 import { useCart } from '@/stores/cart-store';
@@ -30,7 +31,6 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
   const [addingAddress, setAddingAddress] = useState(initialAddresses.length === 0);
   const [installation, setInstallation] = useState(false);
   const [couponCode, setCouponCode] = useState<string | null>(null);
-  const [paymentMode, setPaymentMode] = useState<'FULL' | 'ADVANCE'>('FULL');
   const [quote, setQuote] = useState<CheckoutPrice | null>(null);
   const [pricing, setPricing] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -65,7 +65,6 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
         if (cancelled) return;
         setQuote(result);
         if (!result.zone?.installationAvailable) setInstallation(false);
-        if (result.price.status === 'OK' && !result.price.advance.eligible) setPaymentMode('FULL');
       })
       .catch(
         (err) =>
@@ -96,7 +95,8 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
           addressId: address.id,
           installation,
           couponCode: couponCode ?? undefined,
-          paymentMode,
+          paymentMode: 'COD',
+          referralCode: currentReferral(),
           expectedPayablePaise: price.payablePaise,
         }),
       });
@@ -226,24 +226,17 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
         </Step>
 
         <Step number={3} title="Payment">
-          <div className="space-y-3 text-sm">
-            <Choice
-              checked={paymentMode === 'FULL'}
-              onSelect={() => setPaymentMode('FULL')}
-              title={`Pay in full${price ? `, ${formatINR(price.payablePaise)}` : ''}`}
-            />
-            {price?.advance.eligible && (
-              <Choice
-                checked={paymentMode === 'ADVANCE'}
-                onSelect={() => setPaymentMode('ADVANCE')}
-                title={`Pay ${formatINR(price.advance.amountPaise)} now`}
-                detail={`The remaining ${formatINR(price.payablePaise - price.advance.amountPaise)} is due before dispatch.`}
-              />
-            )}
-            <p className="text-muted">
-              Once you place the order we send a secure payment link to your mobile on WhatsApp. Work on your
-              sign starts as soon as the payment is received.
-            </p>
+          <div className="flex gap-3 rounded-xl border border-neon-pink bg-neon-pink/5 p-4 text-sm">
+            <Banknote className="mt-0.5 size-5 shrink-0 text-neon-pink" />
+            <span>
+              <span className="block font-semibold">
+                Cash on delivery{price ? `, ${formatINR(price.payablePaise)}` : ''}
+              </span>
+              <span className="mt-0.5 block text-muted">
+                Pay in cash or by UPI when your sign arrives. We start making it as soon as you place the
+                order.
+              </span>
+            </span>
           </div>
         </Step>
       </div>

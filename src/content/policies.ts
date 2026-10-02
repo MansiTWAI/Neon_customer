@@ -16,7 +16,7 @@ export const POLICIES: Record<string, Policy> = {
       {
         heading: 'When we dispatch',
         body: [
-          'Every sign is made to order. Production starts once your payment is received and you have approved the design proof, and takes five to seven working days for most signs.',
+          'Every sign is made to order. Production starts once you have approved the design proof, and takes five to seven working days for most signs.',
           'The delivery estimate shown at checkout for your pincode counts from the day you approve the proof.',
         ],
       },
@@ -48,7 +48,7 @@ export const POLICIES: Record<string, Policy> = {
       {
         heading: 'Cancelling an order',
         body: [
-          'You can cancel from your order page until production starts. If you have already paid, raise a request from the order page and we refund the full amount to the original payment method within five to seven working days.',
+          'You can cancel from your order page until production starts. Nothing has been charged at that point, so there is nothing to refund.',
           'Once production has started the sign is being made to your design, so the order can no longer be cancelled.',
         ],
       },
@@ -129,7 +129,7 @@ export const POLICIES: Record<string, Policy> = {
       {
         heading: 'Payment',
         body: [
-          'After you place an order we send a secure payment link. Orders that are not paid within 48 hours may be released. Larger orders can be paid half in advance and half before dispatch.',
+          'Orders are paid on delivery, in cash or by UPI, to the person who delivers or installs your sign. Nothing is charged when you place the order.',
         ],
       },
       {

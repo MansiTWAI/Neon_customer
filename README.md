@@ -1,6 +1,6 @@
 # Neon Adda storefront
 
-Storefront for custom LED neon signs: shop, live design studio, checkout and customer account. Next.js 15 and React 19. Talks to the API in [Neon_backend](https://github.com/MansiTWAI/Neon_backend).
+Storefront for custom LED neon signs: shop, live design studio, cash-on-delivery checkout and customer account. Next.js 15 and React 19. Talks to the API in [Neon_backend](https://github.com/MansiTWAI/Neon_backend).
 
 ## Run locally
 

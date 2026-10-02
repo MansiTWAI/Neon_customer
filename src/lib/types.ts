@@ -147,9 +147,8 @@ export interface OrderDetail {
   orderNo: string;
   status: OrderStatus;
   paymentStatus: OrderPaymentStatus;
-  paymentMode: 'FULL' | 'ADVANCE';
+  paymentMode: 'FULL' | 'ADVANCE' | 'COD';
   placedAt: string;
-  payBy: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
   installationRequired: boolean;
@@ -181,7 +180,6 @@ export interface OrderDetail {
     totalPaise: number;
     paidPaise: number;
     duePaise: number;
-    payNowPaise: number;
   };
   shippingAddress: AddressSnapshot;
   billingAddress: AddressSnapshot;
@@ -193,6 +191,7 @@ export interface OrderDetail {
     scheduledEnd: string | null;
     technician: string | null;
     completedAt: string | null;
+    completionCode: string | null;
   } | null;
   invoices: { invoiceNo: string; issuedAt: string; url: string | null }[];
   review: { rating: number; comment: string | null; reply: string | null; at: string } | null;

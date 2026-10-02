@@ -5,7 +5,7 @@ import type { OrderDetail } from '@/lib/types';
 
 const STAGE_LABELS: Record<OrderStage, string> = {
   PLACED: 'Placed',
-  CONFIRMED: 'Payment received',
+  CONFIRMED: 'Confirmed',
   PROOF: 'Design approved',
   PRODUCTION: 'Made and tested',
   DISPATCHED: 'Shipped',
