@@ -118,7 +118,7 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           <Card>
             <CardTitle>{order.items.length === 1 ? 'Your sign' : 'Your signs'}</CardTitle>

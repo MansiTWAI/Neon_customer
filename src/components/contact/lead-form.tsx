@@ -50,7 +50,7 @@ export function LeadForm() {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
+    <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2" noValidate>
       <Field label="Your name" error={errors.name}>
         <TextInput name="name" autoComplete="name" required />
       </Field>

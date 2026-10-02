@@ -43,7 +43,7 @@ export default async function UsePage({ params }: UsePageProps) {
 
       <section className="mx-auto max-w-7xl px-4 py-14">
         <h2 className="font-display text-2xl font-semibold">Start from an idea</h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {page.ideas.map((idea) => (
             <IdeaCard
               key={idea.text}
@@ -64,7 +64,7 @@ export default async function UsePage({ params }: UsePageProps) {
       )}
 
       <section className="border-t border-white/5 bg-night-950">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:grid-cols-3">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-14 sm:grid-cols-3">
           {page.points.map((point) => (
             <div key={point.title}>
               <h3 className="font-semibold">{point.title}</h3>

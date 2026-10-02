@@ -14,7 +14,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
   if (!profile) redirect('/login?next=/account');
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[200px_1fr]">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-[200px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <AccountNav />
       </aside>

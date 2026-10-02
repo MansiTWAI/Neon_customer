@@ -67,7 +67,7 @@ export default function SizeGuidePage() {
         </table>
       </div>
 
-      <section className="mt-10 grid gap-6 sm:grid-cols-3">
+      <section className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
         <div>
           <h2 className="font-semibold">Measure the wall</h2>
           <p className="mt-2 text-sm text-muted">

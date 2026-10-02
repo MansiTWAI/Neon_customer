@@ -22,7 +22,7 @@ export default async function PolicyPage({ params }: PolicyPageProps) {
   if (!policy) notFound();
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-10 px-4 py-12 md:grid-cols-[200px_1fr]">
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-4 py-12 md:grid-cols-[200px_minmax(0,1fr)]">
       <nav aria-label="Policies" className="flex gap-2 overflow-x-auto text-sm md:flex-col md:gap-1">
         {Object.entries(POLICIES).map(([key, p]) => (
           <Link

@@ -5,7 +5,7 @@ import { Check, ImagePlus, LoaderCircle, Upload } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Button, Field, FormError, TextArea, TextInput } from '@/components/ui/form';
 import { ApiError } from '@/lib/api';
 import { api } from '@/lib/browser-api';
@@ -24,9 +24,9 @@ const ACCEPTED = 'image/png,image/jpeg,image/webp';
 const MAX_BYTES = 10 * 1024 * 1024;
 const WIDTHS = { min: 12, max: 96 };
 
-type Session = 'checking' | 'signed-in' | 'signed-out';
+type Session = 'signed-in' | 'signed-out';
 
-export function LogoStudio({ data }: { data: StorefrontData }) {
+export function LogoStudio({ data, signedIn }: { data: StorefrontData; signedIn: boolean }) {
   const { assets, rules, offline } = data;
   const router = useRouter();
   const { backgroundCode, setBackground, wallPhotoUrl } = useStudio();
@@ -40,7 +40,7 @@ export function LogoStudio({ data }: { data: StorefrontData }) {
   const [widthIn, setWidthIn] = useState(24);
   const [backboardCode, setBackboardCode] = useState('BLK_ACR');
   const [lightOn, setLightOn] = useState(true);
-  const [session, setSession] = useState<Session>('checking');
+  const [session, setSession] = useState<Session>(signedIn ? 'signed-in' : 'signed-out');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,13 +49,6 @@ export function LogoStudio({ data }: { data: StorefrontData }) {
   const heightIn = traced
     ? Math.max(4, Math.round(widthIn * traced.aspect * 2) / 2)
     : Math.round(widthIn * 0.6);
-
-  useEffect(() => {
-    api
-      .request('/auth/customer/me')
-      .then(() => setSession('signed-in'))
-      .catch(() => setSession('signed-out'));
-  }, []);
 
   async function chooseFile(chosen: File | undefined) {
     if (!chosen) return;
@@ -141,7 +134,7 @@ export function LogoStudio({ data }: { data: StorefrontData }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <section aria-label="Preview" className="lg:sticky lg:top-24 lg:self-start">
         <div className="relative">
           {traced ? (
@@ -262,7 +255,7 @@ export function LogoStudio({ data }: { data: StorefrontData }) {
 
           <fieldset>
             <legend className="mb-2 text-sm text-muted">Backboard</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {assets.backboards.map((board) => (
                 <button
                   key={board.code}
@@ -362,12 +355,7 @@ export function LogoStudio({ data }: { data: StorefrontData }) {
                 to send your logo. You will need to choose the file again afterwards.
               </p>
             ) : (
-              <Button
-                type="submit"
-                pending={submitting}
-                disabled={offline || !product || session === 'checking'}
-                className="w-full"
-              >
+              <Button type="submit" pending={submitting} disabled={offline || !product} className="w-full">
                 Request a quotation
               </Button>
             )}

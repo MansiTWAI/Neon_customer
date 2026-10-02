@@ -38,7 +38,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </Link>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <NeonBackdrop className="aspect-[4/3] rounded-3xl border border-white/5 lg:sticky lg:top-24">
           <NeonText
             lines={product.design.lines}

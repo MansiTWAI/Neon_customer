@@ -41,7 +41,7 @@ export function CartView({ rules }: { rules: PricingRules }) {
   const belowMinimum = order?.status === 'OK' && order.warnings.includes('BELOW_MIN_ORDER_VALUE');
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[1fr_320px]">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-[minmax(0,1fr)_320px]">
       <section aria-labelledby="cart-title">
         <h1 id="cart-title" className="font-display text-2xl font-bold">
           Your cart

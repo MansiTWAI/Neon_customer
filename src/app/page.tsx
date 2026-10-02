@@ -41,7 +41,7 @@ export default async function HomePage() {
   return (
     <>
       <section className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-28">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-28">
           <div>
             <p className="text-sm font-semibold tracking-widest text-neon-cyan uppercase">Custom LED neon</p>
             <h1 className="mt-3 font-display text-4xl leading-tight font-bold md:text-6xl">
@@ -79,7 +79,7 @@ export default async function HomePage() {
       <section id="uses" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16">
         <h2 className="font-display text-3xl font-semibold">Start from an idea</h2>
         <p className="mt-2 text-muted">Pick one and make it yours in the studio.</p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {IDEAS.map((idea) => (
             <IdeaCard key={idea.label} {...idea} />
           ))}
@@ -106,7 +106,7 @@ export default async function HomePage() {
       <section className="border-y border-white/5 bg-night-950">
         <div className="mx-auto max-w-7xl px-4 py-16">
           <h2 className="font-display text-3xl font-semibold">How it works</h2>
-          <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map(({ icon: Icon, title, body }, i) => (
               <li key={title} className="rounded-2xl border border-white/5 bg-night-800 p-6">
                 <div className="flex items-center justify-between">

@@ -36,7 +36,11 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
   }
 
   return (
-    <form onSubmit={save} onChange={() => setStatus('idle')} className="mt-5 grid gap-4 sm:grid-cols-2">
+    <form
+      onSubmit={save}
+      onChange={() => setStatus('idle')}
+      className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2"
+    >
       <label className="block text-sm text-muted">
         Full name
         <input

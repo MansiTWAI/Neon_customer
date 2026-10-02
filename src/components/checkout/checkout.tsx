@@ -133,7 +133,7 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
   const canPlace = Boolean(price && address && !belowMinimum && !pricing && !addingAddress);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[1fr_360px]">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-6">
         <h1 className="font-display text-2xl font-bold">Checkout</h1>
 
@@ -151,7 +151,11 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
             />
           ) : (
             <div className="space-y-3">
-              <div role="radiogroup" aria-label="Delivery address" className="grid gap-3 sm:grid-cols-2">
+              <div
+                role="radiogroup"
+                aria-label="Delivery address"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+              >
                 {addresses.map((a) => (
                   <label
                     key={a.id}

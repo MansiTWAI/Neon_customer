@@ -28,9 +28,11 @@ interface StudioProps {
   initialText?: string;
   /** Pick up a design handed over from a product page, a saved design or a shared link. */
   openHandoff?: boolean;
+  /** Whether the visitor has a session, so the logo studio knows to ask them to sign in first. */
+  signedIn?: boolean;
 }
 
-export function Studio({ data, mode, initialText, openHandoff }: StudioProps) {
+export function Studio({ data, mode, initialText, openHandoff, signedIn = false }: StudioProps) {
   const router = useRouter();
 
   return (
@@ -64,7 +66,7 @@ export function Studio({ data, mode, initialText, openHandoff }: StudioProps) {
       </div>
 
       {mode === 'LOGO' ? (
-        <LogoStudio data={data} />
+        <LogoStudio data={data} signedIn={signedIn} />
       ) : (
         <TextStudio data={data} initialText={initialText} openHandoff={openHandoff} />
       )}
@@ -72,7 +74,7 @@ export function Studio({ data, mode, initialText, openHandoff }: StudioProps) {
   );
 }
 
-function TextStudio({ data, initialText, openHandoff }: Omit<StudioProps, 'mode'>) {
+function TextStudio({ data, initialText, openHandoff }: Omit<StudioProps, 'mode' | 'signedIn'>) {
   const { assets, rules, offline } = data;
   const studio = useStudio();
   const [ready, setReady] = useState(false);
@@ -177,7 +179,7 @@ function TextStudio({ data, initialText, openHandoff }: Omit<StudioProps, 'mode'
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section aria-label="Preview" className="lg:sticky lg:top-24 lg:self-start">
           <div className="relative">
             {ready && (

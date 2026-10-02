@@ -30,7 +30,7 @@ export default function AboutPage() {
         </p>
       </div>
 
-      <dl className="mt-10 grid gap-4 sm:grid-cols-3">
+      <dl className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {FACTS.map((fact) => (
           <div key={fact.label} className="rounded-2xl border border-white/5 bg-night-800 p-5">
             <dt className="font-display text-2xl font-bold neon-text">{fact.value}</dt>

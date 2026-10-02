@@ -64,7 +64,7 @@ export function DesignGallery({ initial }: { initial: SavedDesign[] }) {
   return (
     <>
       <FormError message={error} />
-      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {designs.map((design) => (
           <li key={design.id} className="overflow-hidden rounded-2xl border border-white/5 bg-night-800">
             <SignThumb
