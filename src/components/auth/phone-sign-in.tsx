@@ -109,7 +109,7 @@ export function PhoneSignIn({ next }: { next: string }) {
           defaultValue={sent.previewCode}
           inputMode="numeric"
           autoComplete="one-time-code"
-          pattern="\d{6}"
+          pattern="\d{4,6}"
           maxLength={6}
           placeholder="000000"
           required

@@ -12,7 +12,7 @@ cp .env.example .env.local
 pnpm dev                  # http://localhost:3000
 ```
 
-Sign in with any mobile number. Until WhatsApp is connected on the API, the code is filled in for you.
+Sign in with any mobile number. Until WhatsApp is connected on the API, the code is **1234**.
 
 The browser never calls the API directly: `next.config.ts` forwards `/v1/*` to `API_URL`, so
 sign-in cookies belong to this site wherever the API is hosted.
