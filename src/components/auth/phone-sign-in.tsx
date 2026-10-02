@@ -93,7 +93,7 @@ export function PhoneSignIn({ next }: { next: string }) {
         <Error message={error} />
         <Submit pending={pending}>Send code</Submit>
         <p className="text-center text-xs text-muted">
-          We’ll send a 6-digit code on WhatsApp. No password needed.
+          We’ll send a sign-in code on WhatsApp. No password needed.
         </p>
       </form>
     );
@@ -118,7 +118,7 @@ export function PhoneSignIn({ next }: { next: string }) {
         />
         {sent.previewCode && (
           <span className="mt-1.5 block text-xs text-amber-300">
-            WhatsApp is not connected yet, so we filled in your code: {sent.previewCode}
+            WhatsApp is not connected yet, so use the code {sent.previewCode}. We have filled it in for you.
           </span>
         )}
       </label>

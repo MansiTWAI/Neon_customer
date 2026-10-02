@@ -28,7 +28,9 @@ export function OrderTimeline({ order }: { order: OrderDetail }) {
   const stages = orderStages(order.installationRequired);
   const current = currentStageIndex(order.status, order.installationRequired);
   const doneAt = (stage: OrderStage) =>
-    order.history.find((entry) => STAGE_DONE_BY[stage].includes(entry.status))?.at ?? null;
+    stage === 'PLACED'
+      ? order.placedAt
+      : (order.history.find((entry) => STAGE_DONE_BY[stage].includes(entry.status))?.at ?? null);
 
   return (
     <ol className="grid gap-4 sm:flex sm:gap-0" aria-label="Order progress">

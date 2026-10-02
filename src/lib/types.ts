@@ -78,6 +78,7 @@ export interface ProductDetail extends ProductCard {
   sizes: { label: string; widthIn: number; heightIn: number }[];
   backboards: { code: string; name: string; material: string }[];
   leadTimeDays: number;
+  rateOverridePaise: number | null;
   related: ProductCard[];
 }
 

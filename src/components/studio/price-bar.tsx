@@ -9,6 +9,7 @@ import { ApiError, fetchPrice, type PriceRequest } from '@/lib/api';
 import { api } from '@/lib/browser-api';
 import type { DesignInput } from '@/lib/types';
 import { useCart, type CartDisplay } from '@/stores/cart-store';
+import { MinimumOrderNote } from '../shop/minimum-order-note';
 import type { Snapshot } from './neon-canvas';
 
 type Feedback =
@@ -33,9 +34,10 @@ interface PriceBarProps {
   display: CartDisplay;
   request: PriceRequest;
   snapshotRef: RefObject<Snapshot | null>;
+  minimumPaise: number;
 }
 
-export function PriceBar({ price, design, display, request, snapshotRef }: PriceBarProps) {
+export function PriceBar({ price, design, display, request, snapshotRef, minimumPaise }: PriceBarProps) {
   const router = useRouter();
   const [showBreakup, setShowBreakup] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>({ status: 'idle' });
@@ -170,6 +172,9 @@ export function PriceBar({ price, design, display, request, snapshotRef }: Price
         )}
       </div>
 
+      <div className="mx-auto max-w-7xl px-4 empty:hidden [&>p]:pb-3">
+        <MinimumOrderNote price={price} minimumPaise={minimumPaise} />
+      </div>
       <Feedback state={feedback} />
     </div>
   );

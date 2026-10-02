@@ -1,6 +1,7 @@
 'use client';
 
 import { calculatePrice, formatINR, type PricingRules } from '@neon-adda/shared';
+import { MinimumOrderNote } from './minimum-order-note';
 import { Check, Minus, Palette, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,7 +16,33 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
   const router = useRouter();
   const addToCart = useCart((cart) => cart.add);
   const design = product.design!;
-  const [sizeIndex, setSizeIndex] = useState(Math.min(1, product.sizes.length - 1));
+  const colorCount = new Set(design.lines.map((line) => line.glowHex)).size;
+  const priceAt = (index: number, backboard: string, quantity: number) =>
+    calculatePrice(
+      {
+        productType: 'READYMADE',
+        backboardCode: backboard,
+        widthIn: product.sizes[index]!.widthIn,
+        heightIn: product.sizes[index]!.heightIn,
+        colorCount,
+        addonCodes: [],
+        qty: quantity,
+        installation: false,
+        rateOverridePaise: product.rateOverridePaise,
+      },
+      rules,
+    );
+  // Open on the smallest size that can be ordered on its own.
+  const [sizeIndex, setSizeIndex] = useState(() => {
+    const backboard = product.backboards.some((b) => b.code === design.backboardCode)
+      ? design.backboardCode
+      : product.backboards[0]!.code;
+    const orderable = product.sizes.findIndex((_, i) => {
+      const p = priceAt(i, backboard, 1);
+      return p.status === 'OK' && !p.warnings.includes('BELOW_MIN_ORDER_VALUE');
+    });
+    return orderable >= 0 ? orderable : product.sizes.length - 1;
+  });
   const [backboardCode, setBackboardCode] = useState(
     product.backboards.some((b) => b.code === design.backboardCode)
       ? design.backboardCode
@@ -29,7 +56,6 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
   });
 
   const size = product.sizes[sizeIndex]!;
-  const colorCount = new Set(design.lines.map((line) => line.glowHex)).size;
   const request = {
     productId: product.id,
     productType: 'READYMADE' as const,
@@ -41,23 +67,8 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
     qty,
     installation: false,
   };
-  const price = useMemo(
-    () =>
-      calculatePrice(
-        {
-          productType: 'READYMADE',
-          backboardCode,
-          widthIn: size.widthIn,
-          heightIn: size.heightIn,
-          colorCount,
-          addonCodes: [],
-          qty,
-          installation: false,
-        },
-        rules,
-      ),
-    [backboardCode, size, colorCount, qty, rules],
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- priceAt only reads props already listed
+  const price = useMemo(() => priceAt(sizeIndex, backboardCode, qty), [sizeIndex, backboardCode, qty, rules]);
 
   async function add() {
     if (price.status !== 'OK') return;
@@ -113,6 +124,7 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
           {price.status === 'OK' ? formatINR(price.payablePaise) : 'Price on request'}
         </p>
         <p className="text-sm text-muted">Including GST. Delivery worked out at checkout.</p>
+        <MinimumOrderNote price={price} minimumPaise={rules.minOrderValuePaise} />
       </div>
 
       <fieldset>

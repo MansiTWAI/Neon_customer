@@ -44,7 +44,7 @@ export const formatSize = (widthIn: number, heightIn: number) =>
   `${widthIn}″ × ${heightIn}″ (${Math.round(widthIn * 2.54)} × ${Math.round(heightIn * 2.54)} cm)`;
 
 export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: BadgeTone }> = {
-  PENDING_PAYMENT: { label: 'Awaiting payment', tone: 'amber' },
+  PENDING_PAYMENT: { label: 'Awaiting confirmation', tone: 'amber' },
   EXPIRED: { label: 'Expired', tone: 'neutral' },
   CONFIRMED: { label: 'Confirmed', tone: 'cyan' },
   PROOF_PENDING: { label: 'Design in progress', tone: 'cyan' },

@@ -236,6 +236,7 @@ function TextStudio({ data, initialText, openHandoff }: Omit<StudioProps, 'mode'
           installation: false,
         }}
         snapshotRef={snapshotRef}
+        minimumPaise={rules.minOrderValuePaise}
       />
     </>
   );
