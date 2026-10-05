@@ -7,6 +7,7 @@ import { PincodeCheck } from '@/components/shop/pincode-check';
 import { ProductGrid } from '@/components/shop/product-card';
 import { NeonBackdrop, NeonText } from '@/components/ui/neon-text';
 import { fetchProduct, loadStorefrontData } from '@/lib/api';
+import { SITE_URL } from '@/lib/site';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -18,6 +19,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   return {
     title: `${product.name} neon sign`,
     description: product.description ?? `${product.name} LED neon sign, handmade and delivered across India.`,
+    alternates: { canonical: `/p/${product.slug}` },
+    ...(product.imageUrl ? { openGraph: { images: [product.imageUrl] } } : {}),
   };
 }
 
@@ -26,8 +29,34 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const [product, { rules }] = await Promise.all([fetchProduct(slug), loadStorefrontData()]);
   if (!product?.design || !product.sizes.length || !product.backboards.length) notFound();
 
+  // Lets search engines show the product with its starting price.
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: `${product.name} neon sign`,
+    description: product.description ?? undefined,
+    image: product.imageUrl ?? undefined,
+    category: product.category.name,
+    brand: { '@type': 'Brand', name: 'Neon Adda' },
+    url: `${SITE_URL}/p/${product.slug}`,
+    ...(product.fromPricePaise
+      ? {
+          offers: {
+            '@type': 'AggregateOffer',
+            priceCurrency: 'INR',
+            lowPrice: (product.fromPricePaise / 100).toFixed(2),
+            availability: 'https://schema.org/InStock',
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <nav aria-label="Breadcrumb" className="mb-6 text-sm text-muted">
         <Link href="/shop" className="hover:text-ink">
           Shop

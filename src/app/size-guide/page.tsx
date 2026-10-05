@@ -4,6 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Size guide',
   description: 'How big should your neon sign be? Sizes for walls, headboards, counters and stages.',
+  alternates: { canonical: '/size-guide' },
 };
 
 const SIZES = [

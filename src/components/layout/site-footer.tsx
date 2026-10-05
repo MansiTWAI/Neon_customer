@@ -41,8 +41,8 @@ const COLUMNS = [
 export function SiteFooter() {
   return (
     <footer className="border-t border-white/5 bg-night-950">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-12 text-sm text-muted sm:grid-cols-2 lg:grid-cols-5">
-        <div>
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-12 text-sm text-muted lg:grid-cols-5">
+        <div className="col-span-2 lg:col-span-1">
           <p className="font-display text-base font-bold text-ink">
             <span className="neon-text">NEON</span> ADDA
           </p>

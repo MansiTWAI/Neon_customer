@@ -4,6 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'About us',
   description: 'Neon Adda makes custom LED neon signs by hand, with partner studios across India.',
+  alternates: { canonical: '/about' },
 };
 
 const FACTS = [

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Request a quotation',
   description:
     'Large signs, shop fronts and bulk orders for events, priced by our team within one working day.',
+  alternates: { canonical: '/quote' },
 };
 
 const KINDS: QuoteKind[] = ['LOGO', 'LARGE', 'BULK', 'CUSTOM'];

@@ -1,4 +1,5 @@
 import { ArrowRight, Hammer, PenTool, Ruler, Truck } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Faq } from '@/components/home/faq';
 import { IdeaCard } from '@/components/home/idea-card';
@@ -34,6 +35,8 @@ const STEPS = [
     body: 'Shipped across India, with installation in cities where we have partners.',
   },
 ];
+
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 export default async function HomePage() {
   const featured = (await fetchProducts().catch(() => [])).filter((p) => p.isFeatured).slice(0, 4);

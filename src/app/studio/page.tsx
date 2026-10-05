@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Design your neon sign',
   description:
     'Type your words or upload your logo, pick a colour and size, and watch your LED neon sign light up, with the price shown as you go.',
+  alternates: { canonical: '/studio' },
 };
 
 interface StudioPageProps {

@@ -5,6 +5,7 @@ import { Faq, HOME_QUESTIONS, type Question } from '@/components/home/faq';
 export const metadata: Metadata = {
   title: 'Questions and answers',
   description: 'Pricing, design proofs, delivery, installation, care and warranty for Neon Adda signs.',
+  alternates: { canonical: '/faq' },
 };
 
 const GROUPS: { title: string; questions: Question[] }[] = [
@@ -48,9 +49,25 @@ const GROUPS: { title: string; questions: Question[] }[] = [
   },
 ];
 
+const STRUCTURED_DATA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: GROUPS.flatMap((group) =>
+    group.questions.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
+  ),
+};
+
 export default function FaqPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
       <h1 className="font-display text-3xl font-bold">Questions and answers</h1>
       <p className="mt-2 text-muted">
         Something else on your mind?{' '}

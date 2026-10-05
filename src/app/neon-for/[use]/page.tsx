@@ -16,8 +16,11 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: UsePageProps): Promise<Metadata> {
-  const page = USE_CASES[(await params).use];
-  return page ? { title: page.title, description: page.intro } : {};
+  const use = (await params).use;
+  const page = USE_CASES[use];
+  return page
+    ? { title: page.title, description: page.intro, alternates: { canonical: `/neon-for/${use}` } }
+    : {};
 }
 
 export default async function UsePage({ params }: UsePageProps) {

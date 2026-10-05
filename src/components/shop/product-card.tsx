@@ -12,7 +12,13 @@ export function ProductCard({ product }: { product: Product }) {
       <NeonBackdrop className="aspect-[4/3] transition group-hover:brightness-110">
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.imageUrl} alt="" className="size-full object-cover" />
+          <img
+            src={product.imageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover"
+          />
         ) : (
           product.design && <NeonText lines={product.design.lines} fontFamily={product.design.fontFamily} />
         )}

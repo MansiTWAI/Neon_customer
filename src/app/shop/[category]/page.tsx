@@ -11,7 +11,13 @@ interface CategoryPageProps {
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { category } = await params;
   const match = (await fetchCategories()).find((c) => c.slug === category);
-  return match ? { title: `${match.name} neon signs`, description: match.description ?? undefined } : {};
+  return match
+    ? {
+        title: `${match.name} neon signs`,
+        description: match.description ?? undefined,
+        alternates: { canonical: `/shop/${match.slug}` },
+      }
+    : {};
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
