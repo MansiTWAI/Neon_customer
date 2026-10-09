@@ -74,6 +74,13 @@ const EXAMPLES = [
   },
 ];
 
+const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
+  { label: 'Love', emojis: ['❤️', '💖', '💕', '💘', '😍', '🌹', '💍', '💐'] },
+  { label: 'Celebrate', emojis: ['🎂', '🎉', '🎈', '🎁', '🥳', '✨', '🎊', '🍾'] },
+  { label: 'Festive', emojis: ['🪔', '🎆', '🌙', '⭐', '🌸', '🪷', '🎇', '🕉️'] },
+  { label: 'Fun', emojis: ['🔥', '⚡', '🎮', '👑', '😎', '💯', '🚀', '🌈'] },
+];
+
 const PLACEMENTS: ArtworkOverlay['placement'][] = ['top', 'center', 'bottom'];
 const SIZE_LABELS: Record<LineSize, string> = { lg: 'Large', md: 'Medium', sm: 'Small' };
 const WAIT_HINTS = [
@@ -106,6 +113,10 @@ export function AiDesigner() {
   const [error, setError] = useState<string | null>(null);
   const [drawError, setDrawError] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const promptField = useRef<HTMLTextAreaElement>(null);
+  const lineFields = useRef<(HTMLInputElement | null)[]>([]);
+  // Where the emoji picker types: the prompt or one of the lines, whichever was used last.
+  const [emojiTarget, setEmojiTarget] = useState<'prompt' | number>(0);
   const preview = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -137,7 +148,7 @@ export function AiDesigner() {
     setError(null);
     const text = lines.map((line) => line.text.trim()).filter(Boolean);
     try {
-      const made = await publicRequest<Artwork>('/artwork', {
+      const { id } = await publicRequest<{ id: string }>('/artwork', {
         method: 'POST',
         body: JSON.stringify({
           prompt: prompt.trim(),
@@ -147,6 +158,7 @@ export function AiDesigner() {
           colors: overlay && options.variation ? [overlay.color, overlay.glow] : undefined,
         }),
       });
+      const made = await waitForArtwork(id);
       const artwork = { ...made, aspect };
       const { lines: planned, ...look } = artwork.overlay;
       setResult(artwork);
@@ -175,6 +187,21 @@ export function AiDesigner() {
   function updateLine(index: number, change: Partial<Line>) {
     setLinesTouched(true);
     setLines((current) => current.map((line, i) => (i === index ? { ...line, ...change } : line)));
+  }
+
+  function insertEmoji(emoji: string) {
+    const field = emojiTarget === 'prompt' ? promptField.current : lineFields.current[emojiTarget];
+    const current = emojiTarget === 'prompt' ? prompt : (lines[emojiTarget]?.text ?? '');
+    const limit = emojiTarget === 'prompt' ? 600 : 40;
+    const start = field?.selectionStart ?? current.length;
+    const end = field?.selectionEnd ?? current.length;
+    const next = (current.slice(0, start) + emoji + current.slice(end)).slice(0, limit);
+    if (emojiTarget === 'prompt') setPrompt(next);
+    else updateLine(emojiTarget, { text: next });
+    requestAnimationFrame(() => {
+      field?.focus();
+      field?.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
   }
 
   function download() {
@@ -242,6 +269,8 @@ export function AiDesigner() {
           </label>
           <textarea
             id="designer-prompt"
+            ref={promptField}
+            onFocus={() => setEmojiTarget('prompt')}
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             rows={4}
@@ -293,14 +322,14 @@ export function AiDesigner() {
 
         <fieldset className="min-w-0">
           <legend className="font-semibold">Shape</legend>
-          <div className="mt-2 inline-flex rounded-full border border-white/10 p-1">
+          <div className="mt-2 grid w-full max-w-xs grid-cols-3 rounded-full border border-white/10 p-1">
             {ASPECTS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 aria-pressed={aspect === option.value}
                 onClick={() => setAspect(option.value)}
-                className={`rounded-full px-4 py-1.5 text-sm transition ${
+                className={`rounded-full px-2 py-1.5 text-sm transition ${
                   aspect === option.value ? 'bg-white/15 text-ink' : 'text-muted hover:text-ink'
                 }`}
               >
@@ -321,6 +350,10 @@ export function AiDesigner() {
             {lines.map((line, index) => (
               <div key={index} className="flex gap-2">
                 <input
+                  ref={(element) => {
+                    lineFields.current[index] = element;
+                  }}
+                  onFocus={() => setEmojiTarget(index)}
                   value={line.text}
                   onChange={(event) => updateLine(index, { text: event.target.value })}
                   maxLength={40}
@@ -345,6 +378,7 @@ export function AiDesigner() {
                     type="button"
                     onClick={() => {
                       setLinesTouched(true);
+                      setEmojiTarget(0);
                       setLines((current) => current.filter((_, i) => i !== index));
                     }}
                     aria-label={`Remove line ${index + 1}`}
@@ -364,6 +398,38 @@ export function AiDesigner() {
                 <Plus className="size-4" /> Add a line
               </button>
             )}
+          </div>
+        </fieldset>
+
+        <fieldset className="min-w-0">
+          <legend className="font-semibold">Emojis</legend>
+          <p className="mt-1 text-sm text-muted">
+            Tap to add to{' '}
+            <span className="text-ink">
+              {emojiTarget === 'prompt' ? 'your description' : `line ${emojiTarget + 1}`}
+            </span>
+            . Click a field first to choose where they go.
+          </p>
+          <div className="mt-2 space-y-1.5">
+            {EMOJI_GROUPS.map((group) => (
+              <div key={group.label} className="flex items-center gap-1">
+                <span className="w-20 shrink-0 text-xs text-muted">{group.label}</span>
+                <div className="flex min-w-0 flex-wrap gap-0.5">
+                  {group.emojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => insertEmoji(emoji)}
+                      aria-label={`Add ${emoji}`}
+                      className="grid size-9 place-items-center rounded-lg text-lg transition hover:bg-white/10 active:scale-90"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </fieldset>
 
@@ -405,14 +471,14 @@ export function AiDesigner() {
             </label>
             <div className="col-span-2 sm:col-span-4">
               <span className="text-sm text-muted">Position</span>
-              <div className="mt-1 inline-flex rounded-full border border-white/10 p-1">
+              <div className="mt-1 grid w-full max-w-xs grid-cols-3 rounded-full border border-white/10 p-1">
                 {PLACEMENTS.map((placement) => (
                   <button
                     key={placement}
                     type="button"
                     aria-pressed={overlay.placement === placement}
                     onClick={() => setOverlay({ ...overlay, placement })}
-                    className={`rounded-full px-4 py-1.5 text-sm capitalize transition ${
+                    className={`rounded-full px-2 py-1.5 text-sm capitalize transition ${
                       overlay.placement === placement ? 'bg-white/15 text-ink' : 'text-muted hover:text-ink'
                     }`}
                   >
@@ -560,6 +626,23 @@ export function AiDesigner() {
       </div>
     </div>
   );
+}
+
+type Job =
+  | { status: 'pending' }
+  | { status: 'done'; artwork: Artwork }
+  | { status: 'failed'; error: { status: number; code: string; title: string } };
+
+/** Pictures take longer than a request may stay open, so the API makes them as a job to poll. */
+async function waitForArtwork(id: string): Promise<Artwork> {
+  const deadline = Date.now() + 3 * 60_000;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const job = await publicRequest<Job>(`/artwork/jobs/${id}`, { cache: 'no-store' });
+    if (job.status === 'done') return job.artwork;
+    if (job.status === 'failed') throw new ApiError(job.error);
+  }
+  throw new Error('timed out');
 }
 
 function slugify(text: string) {
