@@ -228,6 +228,7 @@ export interface Quote {
   previewUrl: string | null;
   lettering: Lettering | null;
   logoUrl: string | null;
+  referenceUrl: string | null;
   items: {
     id: string;
     description: string;

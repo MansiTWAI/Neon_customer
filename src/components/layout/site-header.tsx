@@ -10,6 +10,7 @@ const NAV = [
   { href: '/shop', label: 'Shop' },
   { href: '/studio', label: 'Design your sign' },
   { href: '/studio?mode=logo', label: 'Logo signs' },
+  { href: '/create', label: 'AI designer' },
   { href: '/faq', label: 'Help' },
 ];
 

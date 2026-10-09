@@ -36,7 +36,7 @@ export default async function QuotesPage() {
                   className="flex items-center gap-4 p-4 transition hover:bg-white/[0.02]"
                 >
                   <SignThumb
-                    previewUrl={quote.previewUrl ?? quote.logoUrl}
+                    previewUrl={quote.previewUrl ?? quote.logoUrl ?? quote.referenceUrl}
                     lettering={quote.lettering}
                     alt=""
                     className="size-16"

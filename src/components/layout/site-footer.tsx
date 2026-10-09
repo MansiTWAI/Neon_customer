@@ -9,6 +9,7 @@ const COLUMNS = [
       { href: '/shop', label: 'All signs' },
       { href: '/studio', label: 'Design your sign' },
       { href: '/studio?mode=logo', label: 'Logo signs' },
+      { href: '/create', label: 'AI designer' },
       { href: '/quote', label: 'Bulk and large orders' },
     ],
   },

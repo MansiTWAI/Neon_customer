@@ -7,6 +7,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { NeonBackdrop, NeonText } from '@/components/ui/neon-text';
 import { Button, Field, fieldErrors, FormError, Select, TextArea, TextInput } from '@/components/ui/form';
 import { ApiError } from '@/lib/api';
+import { clearQuoteHandoff, readQuoteHandoff, type QuoteHandoff } from '@/lib/artwork';
 import { api } from '@/lib/browser-api';
 import type { StudioAssets } from '@/lib/studio-types';
 import type { DesignInput, QuoteKind } from '@/lib/types';
@@ -22,10 +23,12 @@ export function QuoteRequestForm({
   assets,
   initialKind,
   fromStudio,
+  fromAi,
 }: {
   assets: StudioAssets;
   initialKind: QuoteKind;
   fromStudio: boolean;
+  fromAi: boolean;
 }) {
   const router = useRouter();
   const studio = useStudio();
@@ -38,7 +41,13 @@ export function QuoteRequestForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  useEffect(() => setHydrated(true), []);
+  const [aiDesign, setAiDesign] = useState<QuoteHandoff | null>(null);
+  const [includeAi, setIncludeAi] = useState(true);
+
+  useEffect(() => {
+    setHydrated(true);
+    if (fromAi) setAiDesign(readQuoteHandoff());
+  }, [fromAi]);
 
   const product = assets.products.find((p) => p.type === 'TEXT_NEON');
   const colors = new Map(assets.colors.map((c) => [c.id, c]));
@@ -66,6 +75,7 @@ export function QuoteRequestForm({
         }
       : null;
   const design = includeDesign ? studioDesign : null;
+  const aiPicture = aiDesign && includeAi ? aiDesign : null;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,6 +91,7 @@ export function QuoteRequestForm({
         body: JSON.stringify({
           kind,
           design: design ?? undefined,
+          preview: aiPicture?.image,
           widthIn: design ? undefined : number('widthIn'),
           heightIn: design ? undefined : number('heightIn'),
           qty: number('qty') ?? 1,
@@ -89,6 +100,7 @@ export function QuoteRequestForm({
           message: String(form.get('message') ?? '').trim() || undefined,
         }),
       });
+      if (aiPicture) clearQuoteHandoff();
       router.push(`/account/quotes/${quote.id}?requested=1`);
     } catch (err) {
       setPending(false);
@@ -141,6 +153,23 @@ export function QuoteRequestForm({
         </label>
       )}
 
+      {aiDesign && (
+        <label className="flex cursor-pointer items-center gap-4 rounded-xl border border-white/10 p-3">
+          <input
+            type="checkbox"
+            checked={includeAi}
+            onChange={(e) => setIncludeAi(e.target.checked)}
+            className="accent-pink-500"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element -- a picture made in this browser */}
+          <img src={aiDesign.image} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+          <span className="min-w-0 text-sm">
+            <span className="block font-semibold">Include my AI design</span>
+            <span className="block truncate text-muted">{aiDesign.title}</span>
+          </span>
+        </label>
+      )}
+
       {!design && (
         <div className="grid grid-cols-2 gap-4">
           <Field label="Width in inches" optional error={errors.widthIn}>
@@ -180,7 +209,14 @@ export function QuoteRequestForm({
         error={errors.message}
         hint="The words, where it will hang, colours, and the date you need it by."
       >
-        <TextArea name="message" rows={5} maxLength={2000} required={!design} />
+        <TextArea
+          key={aiDesign ? 'ai' : 'plain'}
+          name="message"
+          rows={5}
+          maxLength={2000}
+          required={!design}
+          defaultValue={aiDesign ? `From the AI designer: ${aiDesign.prompt}`.slice(0, 2000) : undefined}
+        />
       </Field>
 
       <FormError message={error} />

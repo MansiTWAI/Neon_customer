@@ -31,6 +31,7 @@ export default async function QuoteRequestPage({
         assets={assets}
         initialKind={KINDS.includes(kind as QuoteKind) ? (kind as QuoteKind) : 'CUSTOM'}
         fromStudio={from === 'studio'}
+        fromAi={from === 'ai'}
       />
     </div>
   );

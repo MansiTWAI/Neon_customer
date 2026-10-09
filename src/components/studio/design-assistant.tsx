@@ -1,6 +1,7 @@
 'use client';
 
 import { LoaderCircle, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, publicRequest } from '@/lib/api';
 import { useStudio } from '@/stores/studio-store';
@@ -100,6 +101,12 @@ export function DesignAssistant() {
         </div>
       )}
       {note && <p className="mt-2 text-sm text-muted">{note}</p>}
+      <p className="mt-3 text-xs text-muted">
+        Want a full picture with artwork around your words?{' '}
+        <Link href="/create" className="font-semibold text-neon-cyan hover:underline">
+          Try the AI designer
+        </Link>
+      </p>
       {error && (
         <p role="alert" className="mt-2 text-sm text-amber-300">
           {error}

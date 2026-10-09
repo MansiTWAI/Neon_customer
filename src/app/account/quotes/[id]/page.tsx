@@ -32,7 +32,7 @@ export default async function QuotePage({ params, searchParams }: QuotePageProps
   const addresses = quote.status === 'SENT' ? await serverApi.request<Address[]>('/me/addresses') : [];
   const status = QUOTE_STATUS[quote.status];
   const request = quote.request;
-  const picture = quote.previewUrl ?? quote.logoUrl;
+  const picture = quote.previewUrl ?? quote.logoUrl ?? quote.referenceUrl;
 
   return (
     <div className="space-y-6">
