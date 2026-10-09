@@ -98,7 +98,9 @@ export async function composeArtwork(canvas: HTMLCanvasElement, image: string, o
   ctx.fillStyle = shade;
   ctx.fillRect(0, bandTop, width, bandHeight);
 
-  const fill = light ? deepest(overlay.color, overlay.glow) : overlay.color;
+  // Dark letters vanish on a dark picture (red names on red roses): lighten them, keeping the
+  // colour in the glow around them.
+  const fill = light ? deepest(overlay.color, overlay.glow) : brightest(overlay.color);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   let y = top;
@@ -137,6 +139,15 @@ function brightness(ctx: CanvasRenderingContext2D, from: number, width: number, 
 function luminance(hex: string): number {
   const value = Number.parseInt(hex.replace('#', ''), 16);
   return (0.2126 * ((value >> 16) & 255) + 0.7152 * ((value >> 8) & 255) + 0.0722 * (value & 255)) / 255;
+}
+
+/** The colour itself when it is light enough to read on a dark picture, otherwise a pale tint of it. */
+function brightest(hex: string): string {
+  if (luminance(hex) >= 0.5) return hex;
+  const value = Number.parseInt(hex.replace('#', ''), 16);
+  const mix = (channel: number) => Math.round(channel + (255 - channel) * 0.65);
+  const [r, g, b] = [(value >> 16) & 255, (value >> 8) & 255, value & 255].map(mix);
+  return `#${((r! << 16) | (g! << 8) | b!).toString(16).padStart(6, '0')}`;
 }
 
 /** The darker of two colours, or a deep slate when both are too pale to read on white. */
