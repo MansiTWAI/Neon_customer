@@ -85,31 +85,64 @@ export async function composeArtwork(canvas: HTMLCanvasElement, image: string, o
         ? height * 0.9 - total
         : (height - total) / 2;
 
-  // A soft shade behind the words so they read on a busy picture.
-  const shade = ctx.createLinearGradient(0, top - height * 0.12, 0, top + total + height * 0.12);
-  shade.addColorStop(0, 'rgba(0,0,0,0)');
-  shade.addColorStop(0.5, 'rgba(0,0,0,0.38)');
-  shade.addColorStop(1, 'rgba(0,0,0,0)');
+  // A soft band behind the words so they read on a busy picture: dark on dark pictures, and a
+  // white veil with deeper lettering on light ones, where a dark band would look muddy.
+  const bandTop = Math.max(0, top - height * 0.12);
+  const bandHeight = Math.min(height - bandTop, total + height * 0.24);
+  const light = brightness(ctx, bandTop, width, bandTop + bandHeight) > 0.62;
+  const shade = ctx.createLinearGradient(0, bandTop, 0, bandTop + bandHeight);
+  const tint = light ? '255,255,255' : '0,0,0';
+  shade.addColorStop(0, `rgba(${tint},0)`);
+  shade.addColorStop(0.5, `rgba(${tint},${light ? 0.55 : 0.38})`);
+  shade.addColorStop(1, `rgba(${tint},0)`);
   ctx.fillStyle = shade;
-  ctx.fillRect(0, top - height * 0.12, width, total + height * 0.24);
+  ctx.fillRect(0, bandTop, width, bandHeight);
 
+  const fill = light ? deepest(overlay.color, overlay.glow) : overlay.color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   let y = top;
   for (const line of laid) {
     ctx.font = font(line.px);
     ctx.shadowColor = overlay.glow;
-    for (const blur of [line.px * 0.6, line.px * 0.3, line.px * 0.12]) {
+    for (const blur of light ? [line.px * 0.25] : [line.px * 0.6, line.px * 0.3, line.px * 0.12]) {
       ctx.shadowBlur = blur;
-      ctx.fillStyle = overlay.glow;
+      ctx.fillStyle = light ? fill : overlay.glow;
       ctx.fillText(line.text, width / 2, y);
     }
-    ctx.shadowBlur = line.px * 0.06;
-    ctx.fillStyle = overlay.color;
+    ctx.shadowBlur = light ? 0 : line.px * 0.06;
+    ctx.fillStyle = fill;
     ctx.fillText(line.text, width / 2, y);
     y += line.px * (1 + gap);
   }
   ctx.shadowBlur = 0;
+}
+
+/** Average brightness (0 to 1) of a horizontal band of the canvas. */
+function brightness(ctx: CanvasRenderingContext2D, from: number, width: number, to: number): number {
+  try {
+    const { data } = ctx.getImageData(0, Math.round(from), width, Math.max(1, Math.round(to - from)));
+    let sum = 0;
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4 * 16) {
+      sum += (0.2126 * data[i]! + 0.7152 * data[i + 1]! + 0.0722 * data[i + 2]!) / 255;
+      count += 1;
+    }
+    return count ? sum / count : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function luminance(hex: string): number {
+  const value = Number.parseInt(hex.replace('#', ''), 16);
+  return (0.2126 * ((value >> 16) & 255) + 0.7152 * ((value >> 8) & 255) + 0.0722 * (value & 255)) / 255;
+}
+
+/** The darker of two colours, or a deep slate when both are too pale to read on white. */
+function deepest(a: string, b: string): string {
+  const darker = luminance(a) <= luminance(b) ? a : b;
+  return luminance(darker) < 0.55 ? darker : '#1e293b';
 }
 
 /** A JPEG small enough to attach to a quotation request (the API takes up to 1.5 MB). */
