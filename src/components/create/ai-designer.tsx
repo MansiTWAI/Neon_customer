@@ -14,6 +14,7 @@ import {
   Trash2,
   Wand2,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -32,6 +33,19 @@ import {
 } from '@/lib/artwork';
 import { BACKGROUNDS, backgroundDataUrl, type Background } from '@/lib/backgrounds';
 import { api } from '@/lib/browser-api';
+import type { Backboard, NeonDesign, WallId } from '@/lib/neon-renderer';
+import { SYMBOL_CHARACTERS } from '@/lib/neon-symbols';
+import type { NeonSign3DHandle } from './neon-sign-3d';
+
+// Three.js is large, so the 3D view loads only in the browser and only on this page.
+const NeonSign3D = dynamic(() => import('./neon-sign-3d').then((module) => module.NeonSign3D), {
+  ssr: false,
+  loading: () => (
+    <div className="flex size-full items-center justify-center text-sm text-muted" role="status">
+      Loading the 3D view…
+    </div>
+  ),
+});
 import { openInStudio } from '@/lib/studio-handoff';
 
 const STYLES: { value: ArtworkStyle; label: string; emoji: string }[] = [
@@ -79,6 +93,7 @@ const EXAMPLES = [
 ];
 
 const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
+  { label: 'Neon', emojis: Object.values(SYMBOL_CHARACTERS) },
   { label: 'Love', emojis: ['❤️', '💖', '💕', '💘', '😍', '🌹', '💍', '💐'] },
   { label: 'Celebrate', emojis: ['🎂', '🎉', '🎈', '🎁', '🥳', '✨', '🎊', '🍾'] },
   { label: 'Festive', emojis: ['🪔', '🎆', '🌙', '⭐', '🌸', '🪷', '🎇', '🕉️'] },
@@ -86,6 +101,20 @@ const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
 ];
 
 const PLACEMENTS: ArtworkOverlay['placement'][] = ['top', 'center', 'bottom'];
+const NEON_COLORS = ['#ff2e88', '#22d3ee', '#ffd166', '#a855f7', '#39ff88', '#ff5a36', '#fff4e0', '#3b82f6'];
+const WALLS: { value: WallId | 'picture'; label: string }[] = [
+  { value: 'brick', label: 'Brick' },
+  { value: 'concrete', label: 'Concrete' },
+  { value: 'plaster', label: 'White wall' },
+  { value: 'wood', label: 'Wood' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'picture', label: 'My picture' },
+];
+const BACKBOARDS: { value: Backboard; label: string }[] = [
+  { value: 'clear', label: 'Clear acrylic' },
+  { value: 'black', label: 'Black' },
+  { value: 'none', label: 'None' },
+];
 const SIZE_LABELS: Record<LineSize, string> = { lg: 'Large', md: 'Medium', sm: 'Small' };
 const WAIT_HINTS = [
   'Reading your idea…',
@@ -128,6 +157,18 @@ export function AiDesigner() {
   const [perCustomer, setPerCustomer] = useState<number | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
+  // The 3D neon sign is drawn from the words alone, so it is the default view and needs no AI.
+  const [mode, setMode] = useState<'neon' | 'flat'>('neon');
+  const [neonFont, setNeonFont] = useState('Great Vibes');
+  const [lineColors, setLineColors] = useState<string[]>([]);
+  const [thickness, setThickness] = useState(1);
+  const [backboard, setBackboard] = useState<Backboard>('clear');
+  const [wall, setWall] = useState<WallId | 'picture'>('brick');
+  const [align, setAlign] = useState<NeonDesign['align']>('center');
+  const [neonSkipped, setNeonSkipped] = useState<string[]>([]);
+  const [neonUnavailable, setNeonUnavailable] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const neonHandle = useRef<NeonSign3DHandle | null>(null);
   const [pending, setPending] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +255,7 @@ export function AiDesigner() {
       const { lines: planned, ...look } = artwork.overlay;
       setResult(artwork);
       setOverlay(look);
+      setWall('picture');
       if (!linesTouched || !text.length) setLines(planned.length ? planned : [{ text: '', size: 'lg' }]);
       setHistory((previous) => [artwork, ...previous].slice(0, 6));
       if (window.matchMedia('(max-width: 1023px)').matches) {
@@ -249,6 +291,7 @@ export function AiDesigner() {
     };
     setResult(picked);
     setOverlay(background.look);
+    setWall('picture');
     setError(null);
     if (!lines.some((line) => line.text.trim())) {
       setLines(
@@ -287,7 +330,44 @@ export function AiDesigner() {
     });
   }
 
-  function download() {
+  const neonLines = lines.filter((line) => line.text.trim());
+  const neonDesign: NeonDesign = {
+    lines: (neonLines.length ? neonLines : [{ text: 'Your name ❤️', size: 'lg' as const }]).map(
+      (line, index) => ({
+        text: line.text.trim(),
+        size: line.size,
+        color: lineColors[index] ?? NEON_COLORS[0]!,
+      }),
+    ),
+    thickness,
+    align,
+    backboard,
+    wall: wall === 'picture' && result ? { image: result.image } : wall === 'picture' ? 'brick' : wall,
+  };
+  const showNeon = mode === 'neon' && !neonUnavailable;
+
+  function save(blob: Blob, name: string) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  async function download() {
+    if (showNeon) {
+      if (!neonHandle.current) return;
+      setExporting(true);
+      try {
+        const blob = await neonHandle.current.exportPng(2400);
+        save(blob, `neon-adda-${slugify(neonDesign.lines[0]!.text) || 'sign'}-3d.png`);
+      } catch {
+        setError('The picture could not be saved. Try again.');
+      } finally {
+        setExporting(false);
+      }
+      return;
+    }
     if (!canvas.current || !result) return;
     canvas.current.toBlob((blob) => {
       if (!blob) return;
@@ -300,6 +380,14 @@ export function AiDesigner() {
   }
 
   function requestQuote() {
+    if (showNeon) {
+      const image = neonHandle.current?.snapshot();
+      if (!image) return;
+      const words = neonDesign.lines.map((line) => line.text).join(' / ');
+      saveForQuote({ image, title: `Neon sign: ${words}`, prompt: `3D neon sign "${words}" in ${neonFont}` });
+      router.push('/quote?from=ai');
+      return;
+    }
     if (!canvas.current || !result) return;
     const image = canvasForUpload(canvas.current);
     if (!image) {
@@ -311,15 +399,26 @@ export function AiDesigner() {
   }
 
   function lightItUp() {
-    if (!overlay) return;
     const words = lines.filter((line) => line.text.trim()).slice(0, 3);
     if (!words.length) return;
     router.push(
       openInStudio({
-        lines: words.map((line) => ({ text: line.text.trim(), glowHex: overlay.glow })),
-        fontFamily: overlay.font,
+        lines: words.map((line, index) => ({
+          text: line.text.trim(),
+          glowHex: showNeon || !overlay ? (lineColors[index] ?? NEON_COLORS[0]!) : overlay.glow,
+        })),
+        fontFamily: showNeon || !overlay ? neonFont : overlay.font,
       }),
     );
+  }
+
+  function setLineColor(index: number, color: string) {
+    setLineColors((current) => {
+      const next = [...current];
+      for (let i = 0; i <= index; i++) next[i] ??= NEON_COLORS[0]!;
+      next[index] = color;
+      return next;
+    });
   }
 
   const box = ASPECTS.find((a) => a.value === (result && !pending ? result.aspect : aspect))!.box;
@@ -483,7 +582,7 @@ export function AiDesigner() {
           </fieldset>
 
           <fieldset className="min-w-0">
-            <legend className="font-semibold">Emojis</legend>
+            <legend className="font-semibold">Emojis and neon symbols</legend>
             <p className="mt-1 text-sm text-muted">
               Tap to add to{' '}
               <span className="text-ink">
@@ -514,7 +613,107 @@ export function AiDesigner() {
             </div>
           </fieldset>
 
-          {result && overlay && (
+          {showNeon && (
+            <fieldset className="min-w-0 space-y-4">
+              <legend className="mb-2 font-semibold">Neon sign</legend>
+              <label className="block text-sm text-muted">
+                Font
+                <select
+                  value={neonFont}
+                  onChange={(event) => setNeonFont(event.target.value)}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-night-900 px-3 py-2.5 text-ink"
+                  style={{ fontFamily: `"${neonFont}"` }}
+                >
+                  {ARTWORK_FONTS.map((font) => (
+                    <option key={font} value={font} style={{ fontFamily: `"${font}"` }}>
+                      {font}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div>
+                <span className="text-sm text-muted">Colours</span>
+                <div className="mt-1 space-y-2">
+                  {neonDesign.lines.map((line, index) => (
+                    <div key={index} className="flex min-w-0 items-center gap-2">
+                      <input
+                        type="color"
+                        value={lineColors[index] ?? NEON_COLORS[0]}
+                        onChange={(event) => setLineColor(index, event.target.value)}
+                        aria-label={`Colour of line ${index + 1}`}
+                        className="h-9 w-11 shrink-0 cursor-pointer rounded-lg border border-white/10 bg-night-900 p-1"
+                      />
+                      <div className="flex min-w-0 flex-wrap gap-1">
+                        {NEON_COLORS.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => setLineColor(index, color)}
+                            aria-label={`Use ${color} for line ${index + 1}`}
+                            aria-pressed={(lineColors[index] ?? NEON_COLORS[0]) === color}
+                            className="size-6 rounded-full border-2 border-transparent aria-pressed:border-white"
+                            style={{ background: color, boxShadow: `0 0 8px ${color}` }}
+                          />
+                        ))}
+                      </div>
+                      <span className="hidden truncate text-xs text-muted sm:inline">{line.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <label className="block text-sm text-muted">
+                Tube thickness
+                <input
+                  type="range"
+                  min={0.6}
+                  max={1.8}
+                  step={0.1}
+                  value={thickness}
+                  onChange={(event) => setThickness(Number(event.target.value))}
+                  className="mt-2 block w-full accent-pink-500"
+                />
+              </label>
+              <Segmented label="Backboard" options={BACKBOARDS} value={backboard} onChange={setBackboard} />
+              <Segmented
+                label="Align"
+                options={[
+                  { value: 'left', label: 'Left' },
+                  { value: 'center', label: 'Centre' },
+                  { value: 'right', label: 'Right' },
+                ]}
+                value={align}
+                onChange={setAlign}
+              />
+              <div>
+                <span className="text-sm text-muted">Wall</span>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {WALLS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={wall === option.value}
+                      disabled={option.value === 'picture' && !result}
+                      title={
+                        option.value === 'picture' && !result
+                          ? 'Make an AI picture or pick a ready-made background first'
+                          : undefined
+                      }
+                      onClick={() => setWall(option.value)}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        wall === option.value
+                          ? 'border-neon-pink bg-neon-pink/15 text-ink'
+                          : 'border-white/10 text-muted hover:text-ink'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </fieldset>
+          )}
+
+          {mode === 'flat' && result && overlay && (
             <fieldset className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
               <legend className="mb-2 font-semibold">Lettering</legend>
               <label className="col-span-2 text-sm text-muted">
@@ -611,10 +810,53 @@ export function AiDesigner() {
 
         <div ref={preview} className="min-w-0 scroll-mt-20 lg:sticky lg:top-20">
           <div
-            className={`relative overflow-hidden rounded-2xl border border-white/10 bg-night-800 ${box}`}
+            className="mb-3 grid w-full max-w-sm grid-cols-2 rounded-full border border-white/10 p-1"
+            role="group"
+            aria-label="Preview"
+          >
+            {(
+              [
+                ['neon', '💡 3D neon sign'],
+                ['flat', '🖼️ Flat poster'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={mode === value}
+                disabled={value === 'neon' && Boolean(neonUnavailable)}
+                onClick={() => setMode(value)}
+                className={`rounded-full px-3 py-1.5 text-sm transition disabled:opacity-40 ${
+                  mode === value ? 'bg-white/15 text-ink' : 'text-muted hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {neonUnavailable && (
+            <p role="alert" className="mb-3 text-sm text-amber-300">
+              {neonUnavailable}
+            </p>
+          )}
+          <div
+            className={`relative overflow-hidden rounded-2xl border border-white/10 bg-night-800 ${showNeon ? ASPECTS.find((a) => a.value === aspect)!.box : box}`}
             aria-busy={pending}
           >
-            {result && (
+            {showNeon && (
+              <NeonSign3D
+                design={neonDesign}
+                fontFamily={neonFont}
+                handle={neonHandle}
+                label={`3D neon sign: ${neonDesign.lines.map((line) => line.text).join(', ')}`}
+                onReport={(report) => setNeonSkipped(report.skipped)}
+                onUnavailable={(reason) => {
+                  setNeonUnavailable(reason);
+                  setMode('flat');
+                }}
+              />
+            )}
+            {!showNeon && result && (
               <canvas
                 ref={canvas}
                 role="img"
@@ -622,7 +864,7 @@ export function AiDesigner() {
                 className={`size-full object-contain transition ${pending ? 'scale-[1.02] opacity-30 blur-sm' : ''}`}
               />
             )}
-            {!result && !pending && (
+            {!showNeon && !result && !pending && (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
                 <Lightbulb className="size-10 text-neon-pink drop-shadow-[0_0_12px_#ff2e88]" aria-hidden />
                 <p className="mt-4 font-display text-lg font-semibold">Your design appears here</p>
@@ -654,7 +896,50 @@ export function AiDesigner() {
             </p>
           )}
 
-          {result && (
+          {showNeon && (
+            <>
+              <div className="mt-3">
+                <p className="font-display font-semibold">Your neon sign in 3D</p>
+                <p className="text-xs text-muted">
+                  Drag to turn it. Words and symbols are bent exactly as typed; no AI is used for the sign.
+                </p>
+              </div>
+              {neonSkipped.length > 0 && (
+                <p className="mt-2 text-xs text-amber-300">
+                  Left out, as neon cannot show them in this font: {neonSkipped.join(' ')}
+                </p>
+              )}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void download()}
+                  pending={exporting}
+                >
+                  {!exporting && <Download className="size-4" />} Download PNG
+                </Button>
+                <Button type="button" size="sm" onClick={requestQuote}>
+                  <Send className="size-4" /> Get it made
+                </Button>
+              </div>
+              {hasWords && (
+                <button
+                  type="button"
+                  onClick={lightItUp}
+                  className="mt-3 flex w-full items-center gap-3 rounded-xl border border-neon-cyan/30 bg-neon-cyan/5 p-3 text-left text-sm transition hover:border-neon-cyan/60"
+                >
+                  <Lightbulb className="size-5 shrink-0 text-neon-cyan" aria-hidden />
+                  <span>
+                    <span className="block font-semibold">See the price for this sign</span>
+                    <span className="text-muted">Open these words in the studio with instant pricing.</span>
+                  </span>
+                </button>
+              )}
+            </>
+          )}
+
+          {!showNeon && result && (
             <>
               <div className="mt-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -689,7 +974,13 @@ export function AiDesigner() {
                     </Button>
                   </>
                 )}
-                <Button type="button" variant="secondary" size="sm" onClick={download} disabled={pending}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void download()}
+                  disabled={pending}
+                >
                   <Download className="size-4" /> Download
                 </Button>
                 <Button type="button" size="sm" onClick={requestQuote} disabled={pending}>
@@ -724,6 +1015,7 @@ export function AiDesigner() {
                       const { lines: planned, ...look } = item.overlay;
                       setResult(item);
                       setOverlay(look);
+                      setWall('picture');
                       if (!linesTouched) setLines(planned.length ? planned : lines);
                     }}
                     aria-label={`Show ${item.title}`}
@@ -779,6 +1071,42 @@ export function AiDesigner() {
         </div>
       </section>
     </>
+  );
+}
+
+function Segmented<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div>
+      <span className="text-sm text-muted">{label}</span>
+      <div
+        className="mt-1 grid w-full max-w-xs rounded-full border border-white/10 p-1"
+        style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+      >
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={`rounded-full px-2 py-1.5 text-sm transition ${
+              value === option.value ? 'bg-white/15 text-ink' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

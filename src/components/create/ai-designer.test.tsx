@@ -19,6 +19,14 @@ vi.mock('@/lib/api', async (importOriginal) => ({
 vi.mock('@/lib/browser-api', () => ({
   api: { request: (...args: unknown[]) => signedInRequest(...args) },
 }));
+// The 3D view needs WebGL, which jsdom lacks; a stand-in records what it was asked to draw.
+const neonDesigns: unknown[] = [];
+vi.mock('./neon-sign-3d', () => ({
+  NeonSign3D: (props: { design: unknown; fontFamily: string; label: string }) => {
+    neonDesigns.push({ ...(props.design as object), font: props.fontFamily });
+    return <canvas role="img" aria-label={props.label} />;
+  },
+}));
 vi.mock('@/lib/artwork', async (importOriginal) => ({
   ...(await importOriginal<typeof ArtworkModule>()),
   composeArtwork: (...args: unknown[]) => composeArtwork(...(args as [])),
@@ -61,6 +69,7 @@ afterEach(() => {
   publicRequest.mockReset();
   signedInRequest.mockReset();
   sessionStorage.clear();
+  neonDesigns.length = 0;
   composeArtwork.mockClear();
 });
 
@@ -82,7 +91,7 @@ describe('AiDesigner', () => {
     const line = screen.getByLabelText('Line 1') as HTMLInputElement;
     fireEvent.change(line, { target: { value: 'Ananya ' } });
     fireEvent.focus(line);
-    fireEvent.click(screen.getByLabelText('Add 🎂'));
+    fireEvent.click(screen.getAllByLabelText('Add 🎂')[0]!);
     expect(line.value).toBe('Ananya 🎂');
   });
 
@@ -100,6 +109,7 @@ describe('AiDesigner', () => {
       },
     });
     render(<AiDesigner />);
+    fireEvent.click(screen.getByRole('button', { name: /Flat poster/ }));
     fireEvent.change(screen.getByLabelText(/Describe your design/), {
       target: { value: 'Rahul ❤️ Priya with roses' },
     });
@@ -190,6 +200,7 @@ describe('AiDesigner', () => {
   it('uses a ready-made background without the API or a sign-in', async () => {
     api({ '/artwork/status': () => ({ enabled: true }) });
     render(<AiDesigner />);
+    fireEvent.click(screen.getByRole('button', { name: /Flat poster/ }));
     fireEvent.click(screen.getByRole('button', { name: /Golden birthday/ }));
     const picture = await screen.findByRole('img', { name: /Golden birthday: Happy Birthday, Ananya 🎂/ });
     await waitFor(() =>
@@ -202,6 +213,50 @@ describe('AiDesigner', () => {
     expect(signedInRequest).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: /Regenerate/ })).toBeNull();
     expect(screen.getByRole('button', { name: /Download/ })).toBeTruthy();
+  });
+
+  it('shows the words as a 3D neon sign straight away, with no AI call', async () => {
+    api({ '/artwork/status': () => ({ enabled: true }) });
+    render(<AiDesigner />);
+    expect(await screen.findByRole('img', { name: '3D neon sign: Your name ❤️' })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Line 1'), { target: { value: 'Rahul ❤️ Priya' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    fireEvent.change(screen.getByLabelText('Line 2'), { target: { value: '14 · 02 · 2026' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use #22d3ee for line 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Black' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wood' }));
+    fireEvent.change(screen.getByLabelText('Tube thickness'), { target: { value: '1.4' } });
+
+    expect(
+      await screen.findByRole('img', { name: '3D neon sign: Rahul ❤️ Priya, 14 · 02 · 2026' }),
+    ).toBeTruthy();
+    expect(neonDesigns.at(-1)).toEqual({
+      lines: [
+        { text: 'Rahul ❤️ Priya', size: 'lg', color: '#ff2e88' },
+        { text: '14 · 02 · 2026', size: 'md', color: '#22d3ee' },
+      ],
+      thickness: 1.4,
+      align: 'center',
+      backboard: 'black',
+      wall: 'wood',
+      font: 'Great Vibes',
+    });
+    expect(signedInRequest).not.toHaveBeenCalled();
+    // "My picture" needs a picture first.
+    expect((screen.getByRole('button', { name: 'My picture' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('hangs the sign on the chosen ready-made background', async () => {
+    api({ '/artwork/status': () => ({ enabled: true }) });
+    render(<AiDesigner />);
+    fireEvent.click(screen.getByRole('button', { name: /Royal wedding/ }));
+    await waitFor(() =>
+      expect(neonDesigns.at(-1)).toMatchObject({
+        wall: { image: expect.stringMatching(/^data:image\/svg\+xml;base64,/) },
+      }),
+    );
+    expect((screen.getByRole('button', { name: 'My picture' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('refuses an empty description without calling the API', async () => {
