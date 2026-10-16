@@ -71,7 +71,7 @@ export default function FaqPage() {
       <h1 className="font-display text-3xl font-bold">Questions and answers</h1>
       <p className="mt-2 text-muted">
         Something else on your mind?{' '}
-        <Link href="/contact" className="text-neon-cyan hover:underline">
+        <Link href="/contact" className="link">
           Ask us
         </Link>
         .
@@ -79,7 +79,7 @@ export default function FaqPage() {
       {GROUPS.map((group) => (
         <section key={group.title} className="mt-10">
           <h2 className="font-display text-xl font-semibold">{group.title}</h2>
-          <Faq questions={group.questions} />
+          <Faq questions={group.questions} className="mt-4" />
         </section>
       ))}
     </div>

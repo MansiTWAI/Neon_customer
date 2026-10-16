@@ -17,16 +17,16 @@ import {
 const STEPS = ['Text', 'Font', 'Colour', 'Size', 'Backboard', 'Wall', 'Extras'] as const;
 type Step = (typeof STEPS)[number];
 
-const pill = (active: boolean) =>
+export const pill = (active: boolean) =>
   `shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition ${
     active
-      ? 'border-neon-pink bg-neon-pink/15 text-white shadow-[0_0_12px_rgba(255,46,136,0.35)]'
+      ? 'border-white bg-white text-night-900'
       : 'border-white/15 text-muted hover:border-white/40 hover:text-ink'
   }`;
 
 const card = (active: boolean) =>
   `rounded-xl border px-4 py-3 text-left transition ${
-    active ? 'border-neon-pink bg-neon-pink/10' : 'border-white/10 hover:border-white/30'
+    active ? 'border-white/70 bg-white/[0.06]' : 'border-white/10 hover:border-white/30'
   }`;
 
 export function DesignControls({ assets, heightIn }: { assets: StudioAssets; heightIn: number }) {
@@ -98,10 +98,7 @@ function TextStep() {
           Up to {MAX_LINES} lines of {MAX_CHARS_PER_LINE} characters
         </span>
         {lines.length < MAX_LINES && (
-          <button
-            onClick={addLine}
-            className="inline-flex items-center gap-1 font-semibold text-neon-cyan hover:underline"
-          >
+          <button onClick={addLine} className="inline-flex items-center gap-1 font-semibold link">
             <Plus className="size-3.5" /> Add a line
           </button>
         )}
@@ -110,7 +107,7 @@ function TextStep() {
   );
 }
 
-function FontStep({ assets }: { assets: StudioAssets }) {
+export function FontStep({ assets }: { assets: StudioAssets }) {
   const { fontFamily, setFont, lines } = useStudio();
   const sample = lines[0]?.text.trim().slice(0, 10);
   return (
@@ -121,17 +118,19 @@ function FontStep({ assets }: { assets: StudioAssets }) {
           onClick={() => setFont(font.family)}
           aria-pressed={fontFamily === font.family}
           aria-label={font.name}
-          className={`${card(fontFamily === font.family)} truncate px-2 text-center text-lg`}
-          style={{ fontFamily: `"${font.family}", cursive` }}
+          className={`${card(fontFamily === font.family)} min-w-0 px-2 text-center`}
         >
-          {sample || font.name}
+          <span className="block truncate text-lg" style={{ fontFamily: `"${font.family}", cursive` }}>
+            {sample || font.name}
+          </span>
+          <span className="mt-0.5 block truncate text-[11px] text-muted">{font.name}</span>
         </button>
       ))}
     </div>
   );
 }
 
-function ColourStep({ assets }: { assets: StudioAssets }) {
+export function ColourStep({ assets }: { assets: StudioAssets }) {
   const { lines, colorId, multiColor, setColor, setMultiColor } = useStudio();
   const targets = multiColor ? lines.map((_, i) => i) : [undefined];
 
@@ -179,23 +178,42 @@ function ColourStep({ assets }: { assets: StudioAssets }) {
   );
 }
 
-function SizeStep({ heightIn }: { heightIn: number }) {
+const SIZE_NAMES: Record<keyof typeof SIZE_PRESETS, string> = {
+  S: 'Small',
+  M: 'Medium',
+  L: 'Large',
+  XL: 'Extra large',
+};
+
+export function SizeStep({ heightIn }: { heightIn: number }) {
   const { widthIn, aspect, sizePreset, setPreset, setWidth } = useStudio();
   const presets = Object.entries(SIZE_PRESETS) as [keyof typeof SIZE_PRESETS, number][];
   const cm = (inches: number) => Math.round(inches * 2.54);
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {presets.map(([preset, width]) => (
-          <button key={preset} onClick={() => setPreset(preset)} className={pill(sizePreset === preset)}>
-            {preset} · {width}″ × {heightFor(width, aspect)}″
+          <button
+            key={preset}
+            type="button"
+            onClick={() => setPreset(preset)}
+            aria-pressed={sizePreset === preset}
+            className={card(sizePreset === preset)}
+          >
+            <span className="block font-semibold">{SIZE_NAMES[preset]}</span>
+            <span className="block text-sm tabular-nums">
+              {width}″ × {heightFor(width, aspect)}″
+            </span>
+            <span className="block text-xs text-muted tabular-nums">
+              {cm(width)} × {cm(heightFor(width, aspect))} cm
+            </span>
           </button>
         ))}
       </div>
       <div>
         <label htmlFor="sign-width" className="text-sm text-muted">
-          Width in inches. The height follows your lettering.
+          Or set your own width in inches. The height follows your lettering.
         </label>
         <div className="mt-2 flex items-center gap-3">
           <input
@@ -231,7 +249,7 @@ function SizeStep({ heightIn }: { heightIn: number }) {
   );
 }
 
-function BackboardStep({ assets }: { assets: StudioAssets }) {
+export function BackboardStep({ assets }: { assets: StudioAssets }) {
   const { backboardCode, setBackboard } = useStudio();
   return (
     <div className="grid gap-2">
@@ -313,7 +331,7 @@ function WallStep({ assets }: { assets: StudioAssets }) {
   );
 }
 
-function ExtrasStep({ addons }: { addons: StudioAddon[] }) {
+export function ExtrasStep({ addons }: { addons: StudioAddon[] }) {
   const { addonCodes, toggleAddon } = useStudio();
   const describe = (addon: StudioAddon) =>
     addon.pricingType === 'FLAT'

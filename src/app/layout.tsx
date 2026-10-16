@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Sora } from 'next/font/google';
+import { AnnouncementBar, ServiceStrip } from '@/components/home/trust';
 import { ReferralCapture } from '@/components/layout/referral-capture';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
@@ -40,8 +41,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href={NEON_FONTS_STYLESHEET} />
       </head>
       <body className="flex min-h-dvh flex-col">
+        <AnnouncementBar />
         <SiteHeader />
         <main className="flex-1">{children}</main>
+        <ServiceStrip />
         <SiteFooter />
         <ReferralCapture />
         <script

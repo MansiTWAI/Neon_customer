@@ -90,7 +90,8 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
           lines: items.map((item) => ({
             design: item.design,
             qty: item.qty,
-            preview: item.previewUrl ?? undefined,
+            // Ready-made signs show their catalogue photo in the cart; only designed signs send a picture.
+            preview: item.previewUrl?.startsWith('data:') ? item.previewUrl : undefined,
           })),
           addressId: address.id,
           installation,
@@ -161,7 +162,7 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
                     key={a.id}
                     className={`cursor-pointer rounded-xl border p-4 text-sm transition ${
                       a.id === addressId
-                        ? 'border-neon-pink bg-neon-pink/5'
+                        ? 'border-white/70 bg-white/[0.04]'
                         : 'border-white/10 hover:border-white/30'
                     }`}
                   >
@@ -190,7 +191,7 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
               </div>
               <button
                 onClick={() => setAddingAddress(true)}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-neon-cyan hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold link"
               >
                 <Plus className="size-4" /> Add a new address
               </button>
@@ -329,7 +330,7 @@ function Choice(props: {
         props.disabled
           ? 'cursor-not-allowed border-white/5 opacity-60'
           : props.checked
-            ? 'cursor-pointer border-neon-pink bg-neon-pink/5'
+            ? 'cursor-pointer border-white/70 bg-white/[0.04]'
             : 'cursor-pointer border-white/10 hover:border-white/30'
       }`}
     >

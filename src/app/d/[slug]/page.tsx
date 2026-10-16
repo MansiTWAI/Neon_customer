@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: SharedDesignPageProps): Promi
   if (!shared) return {};
   return {
     title: `${shared.name} in neon`,
-    description: 'A custom neon sign designed on Neon Adda. Open it in the studio to make it yours.',
+    description: 'A custom neon sign designed on Neon Adda. Open it in the designer to make it yours.',
     openGraph: shared.previewUrl ? { images: [shared.previewUrl] } : undefined,
     robots: { index: false },
   };
@@ -27,7 +27,7 @@ export default async function SharedDesignPage({ params }: SharedDesignPageProps
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 text-center">
-      <p className="text-sm font-semibold tracking-widest text-neon-cyan uppercase">Shared design</p>
+      <p className="eyebrow">Shared design</p>
       <h1 className="mt-2 font-display text-3xl font-bold">{shared.name}</h1>
       <p className="mt-2 text-muted">{formatSize(shared.design.widthIn, shared.design.heightIn)}</p>
       <SignThumb

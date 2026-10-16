@@ -43,19 +43,28 @@ function glow({ glowHex, tubeHex }: NeonLine): CSSProperties {
   };
 }
 
-/** The dark wall the CSS neon sits on. */
+/** The wall the CSS neon hangs on: dim brick, washed in the sign's own colour. */
 export function NeonBackdrop({
   children,
   className = '',
+  glowHex,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** The sign's colour, for the light it throws on the wall. */
+  glowHex?: string;
 }) {
   return (
     <div
-      className={`grid place-items-center bg-[radial-gradient(ellipse_at_center,#1c1c2a,#07070b_75%)] px-4 ${className}`}
+      className={`neon-wall grid place-items-center px-4 ${className}`}
+      style={glowHex ? ({ '--glow': glowHex } as CSSProperties) : undefined}
     >
       {children}
     </div>
   );
+}
+
+/** A clear acrylic board behind the lettering, as the sign is actually made. */
+export function NeonBoard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <div className={`neon-board max-w-full px-[6%] py-[5%] ${className}`}>{children}</div>;
 }

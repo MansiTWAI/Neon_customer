@@ -145,10 +145,7 @@ export default async function QuotePage({ params, searchParams }: QuotePageProps
             </div>
           )}
           {quote.orderNo && (
-            <Link
-              href={`/orders/${quote.orderNo}`}
-              className="mt-6 inline-block font-semibold text-neon-cyan hover:underline"
-            >
+            <Link href={`/orders/${quote.orderNo}`} className="mt-6 inline-block font-semibold link">
               View order {quote.orderNo}
             </Link>
           )}

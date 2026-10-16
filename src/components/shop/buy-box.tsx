@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/form';
 import { ApiError, fetchPrice } from '@/lib/api';
+import { signPhotos } from '@/content/sign-photos';
 import { handoffFromReadymade, openInStudio } from '@/lib/studio-handoff';
 import type { DesignInput, ProductDetail } from '@/lib/types';
 import { MAX_QTY, useCart } from '@/stores/cart-store';
@@ -98,7 +99,7 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
           productType: 'READYMADE',
           backboardName: product.backboards.find((b) => b.code === backboardCode)!.name,
         },
-        null,
+        product.imageUrl ?? signPhotos(product.slug)?.front ?? null,
         qty,
       );
       setState(
@@ -114,7 +115,7 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
 
   const pill = (active: boolean) =>
     `rounded-xl border px-3 py-2 text-left text-sm transition ${
-      active ? 'border-neon-pink bg-neon-pink/10' : 'border-white/10 hover:border-white/30'
+      active ? 'border-white/70 bg-white/[0.06]' : 'border-white/10 hover:border-white/30'
     }`;
 
   return (
@@ -138,8 +139,11 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
               className={pill(i === sizeIndex)}
             >
               <span className="block font-semibold">{s.label}</span>
-              <span className="text-xs text-muted">
+              <span className="block text-xs text-muted tabular-nums">
                 {s.widthIn}″ × {s.heightIn}″
+              </span>
+              <span className="block text-[11px] text-muted/70 tabular-nums">
+                {Math.round(s.widthIn * 2.54)} × {Math.round(s.heightIn * 2.54)} cm
               </span>
             </button>
           ))}
@@ -208,7 +212,7 @@ export function BuyBox({ product, rules }: { product: ProductDetail; rules: Pric
         onClick={() =>
           router.push(openInStudio(handoffFromReadymade({ ...design, backboardCode }, size.widthIn)))
         }
-        className="inline-flex items-center gap-2 text-sm font-semibold text-neon-cyan hover:underline"
+        className="inline-flex items-center gap-2 text-sm font-semibold link"
       >
         <Palette className="size-4" /> Change the words, font or colour
       </button>

@@ -11,10 +11,10 @@ export interface StudioHandoff {
   addonCodes?: string[];
 }
 
-/** Stores the design for the studio to pick up and returns the URL to navigate to. */
+/** Stores the design for the 3D designer to pick up and returns the URL to navigate to. */
 export function openInStudio(design: StudioHandoff): string {
   sessionStorage.setItem(KEY, JSON.stringify(design));
-  return '/studio?open=1';
+  return '/create?open=1';
 }
 
 export function takeHandoff(): StudioHandoff | null {

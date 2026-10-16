@@ -65,6 +65,27 @@ export const USE_CASES: Record<string, UseCase> = {
       },
     ],
   },
+  gaming: {
+    label: 'Gaming rooms',
+    title: 'Neon signs for gaming rooms',
+    headline: 'Your gamertag, lit up',
+    intro:
+      'Your handle above the desk, a lightning bolt beside it, in colours that match your setup and show up on stream.',
+    tag: 'gaming',
+    ideas: [
+      { text: 'GAME ON', font: 'Monoton', glowHex: '#8B5CF6' },
+      { text: 'Player 1', font: 'Righteous', glowHex: '#22D3EE' },
+      { text: 'Level up', font: 'Bungee', glowHex: '#84CC16' },
+    ],
+    points: [
+      {
+        title: 'Symbols in neon',
+        body: 'Add lightning, stars, fire or a crown to your words in the 3D designer.',
+      },
+      { title: 'Add a dimmer', body: 'Turn it down for late sessions. The remote comes in the box.' },
+      { title: 'Cool to the touch', body: 'LED neon runs on a 12 V adapter, so it is safe on a desk wall.' },
+    ],
+  },
   cafes: {
     label: 'Cafés and restaurants',
     title: 'Neon signs for cafés and restaurants',

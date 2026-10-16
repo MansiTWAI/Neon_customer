@@ -93,7 +93,7 @@ export default function SizeGuidePage() {
 
       <p className="mt-10 text-sm text-muted">
         Need something bigger than 8 feet?{' '}
-        <Link href="/quote?kind=LARGE" className="font-semibold text-neon-cyan hover:underline">
+        <Link href="/quote?kind=LARGE" className="font-semibold link">
           Ask for a quotation
         </Link>
         .

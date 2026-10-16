@@ -55,8 +55,8 @@ export function DesignGallery({ initial }: { initial: SavedDesign[] }) {
       <EmptyState
         icon={Bookmark}
         title="No saved designs"
-        body="Use the bookmark button in the studio to keep a design for later or share it with someone."
-        action={{ href: '/studio', label: 'Open the studio' }}
+        body="Use the bookmark button in the designer to keep a design for later or share it with someone."
+        action={{ href: '/create', label: 'Design a sign' }}
       />
     );
   }

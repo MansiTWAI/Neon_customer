@@ -132,7 +132,7 @@ export function PhoneSignIn({ next }: { next: string }) {
           type="button"
           onClick={requestCode}
           disabled={resendIn > 0 || pending}
-          className="font-semibold text-neon-cyan disabled:text-muted"
+          className="font-semibold link disabled:text-muted disabled:no-underline"
         >
           {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
         </button>

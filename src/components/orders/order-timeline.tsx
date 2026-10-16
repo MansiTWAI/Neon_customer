@@ -52,7 +52,7 @@ export function OrderTimeline({ order }: { order: OrderDetail }) {
                 done
                   ? 'border-neon-pink bg-neon-pink text-white'
                   : active
-                    ? 'border-neon-pink bg-night-800 text-neon-pink shadow-neon'
+                    ? 'border-neon-pink bg-night-800 text-neon-pink'
                     : 'border-white/15 bg-night-800 text-muted'
               }`}
             >

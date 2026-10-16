@@ -58,7 +58,7 @@ export default async function AccountPage() {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Recent orders</h2>
             {orders.length > 3 && (
-              <Link href="/account/orders" className="text-sm font-semibold text-neon-cyan hover:underline">
+              <Link href="/account/orders" className="text-sm font-semibold link">
                 See all
               </Link>
             )}

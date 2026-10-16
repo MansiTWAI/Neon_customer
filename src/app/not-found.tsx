@@ -6,7 +6,7 @@ export default function NotFound() {
       <p className="font-display text-6xl font-bold neon-text">404</p>
       <h1 className="mt-6 text-xl font-semibold">This page is switched off</h1>
       <p className="mt-2 text-muted">The page you were looking for does not exist or has moved.</p>
-      <Link href="/" className="mt-6 font-semibold text-neon-cyan hover:underline">
+      <Link href="/" className="mt-6 font-semibold link">
         Back to the home page
       </Link>
     </div>

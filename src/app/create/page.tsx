@@ -1,27 +1,30 @@
 import type { Metadata } from 'next';
-import { AiDesigner } from '@/components/create/ai-designer';
+import { NeonDesigner } from '@/components/create/neon-designer';
+import { loadStorefrontData } from '@/lib/api';
 
 export const metadata: Metadata = {
-  title: 'AI designer: turn your idea into a personalised design',
+  title: 'Design your neon sign in 3D',
   description:
-    'Describe a design in your own words, with names, emojis and colours, and get an AI-painted picture with your words written exactly right. Download it or get it made.',
+    'Type your name or words, add neon hearts, stars and crowns, and see your custom LED neon sign lit in 3D on a wall, with the price as you go.',
   alternates: { canonical: '/create' },
 };
 
-export default function CreatePage() {
+interface CreatePageProps {
+  searchParams: Promise<{ open?: string; text?: string }>;
+}
+
+export default async function CreatePage({ searchParams }: CreatePageProps) {
+  // Reading searchParams first marks the page dynamic before any data is requested.
+  const { open, text } = await searchParams;
+  const data = await loadStorefrontData();
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:py-14">
-      <header className="mb-8 max-w-2xl">
-        <p className="text-sm font-semibold tracking-wide text-neon-pink uppercase">AI designer</p>
-        <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
-          Say it in words. See it in light.
-        </h1>
-        <p className="mt-3 text-muted">
-          Tell us the occasion, the names and the mood. Our AI paints the scene, and we write your words on
-          top, letter-perfect, so &ldquo;Priya&rdquo; never comes out as &ldquo;Prya&rdquo;.
+    <div className="mx-auto max-w-7xl px-4 pt-6 pb-12">
+      {data.offline && process.env.NODE_ENV !== 'production' && (
+        <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          The API is unreachable, so launch prices are shown and adding to cart is disabled.
         </p>
-      </header>
-      <AiDesigner />
+      )}
+      <NeonDesigner data={data} openHandoff={open === '1'} initialText={text?.trim() || undefined} />
     </div>
   );
 }

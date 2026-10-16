@@ -59,10 +59,7 @@ export function DesignAssistant() {
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="mb-5 rounded-2xl border border-neon-pink/30 bg-gradient-to-br from-neon-pink/10 to-transparent p-4"
-    >
+    <form onSubmit={submit} className="mb-5 rounded-2xl border border-white/10 bg-night-800 p-4">
       <label htmlFor="assistant-prompt" className="flex items-center gap-2 text-sm font-semibold">
         <Sparkles className="size-4 text-neon-pink" /> Describe your sign
       </label>
@@ -102,9 +99,9 @@ export function DesignAssistant() {
       )}
       {note && <p className="mt-2 text-sm text-muted">{note}</p>}
       <p className="mt-3 text-xs text-muted">
-        Want a full picture with artwork around your words?{' '}
-        <Link href="/create" className="font-semibold text-neon-cyan hover:underline">
-          Try the AI designer
+        Want to see it lit in 3D, with hearts, stars and crowns?{' '}
+        <Link href="/create" className="font-semibold link">
+          Open the 3D designer
         </Link>
       </p>
       {error && (

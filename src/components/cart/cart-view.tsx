@@ -10,7 +10,14 @@ import { formatSize } from '@/lib/format';
 import { letteringOf } from '@/lib/types';
 import { MAX_QTY, toLineInput, useCart, type CartItem } from '@/stores/cart-store';
 
-export function CartView({ rules }: { rules: PricingRules }) {
+export function CartView({
+  rules,
+  suggestions,
+}: {
+  rules: PricingRules;
+  /** Popular signs, shown when the cart is empty. */
+  suggestions?: React.ReactNode;
+}) {
   const { items, setQty, remove } = useCart();
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -29,9 +36,16 @@ export function CartView({ rules }: { rules: PricingRules }) {
         <EmptyState
           icon={ShoppingBag}
           title="Your cart is empty"
-          body="Design a sign in the studio or pick one from the shop, and it will wait for you here."
-          action={{ href: '/studio', label: 'Start designing' }}
+          body="Design a sign or pick one from the shop, and it will wait for you here."
+          action={{ href: '/create', label: 'Design your sign' }}
         />
+        {suggestions && (
+          <section className="mt-14">
+            <p className="eyebrow">Popular right now</p>
+            <h2 className="mt-2 mb-8 font-display text-2xl font-semibold">Start with a favourite</h2>
+            {suggestions}
+          </section>
+        )}
       </div>
     );
   }
@@ -57,7 +71,7 @@ export function CartView({ rules }: { rules: PricingRules }) {
             />
           ))}
         </ul>
-        <Link href="/shop" className="mt-4 inline-block text-sm font-semibold text-neon-cyan hover:underline">
+        <Link href="/shop" className="mt-4 inline-block text-sm font-semibold link">
           Continue shopping
         </Link>
       </section>

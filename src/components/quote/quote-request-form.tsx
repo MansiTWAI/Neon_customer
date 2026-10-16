@@ -46,8 +46,9 @@ export function QuoteRequestForm({
 
   useEffect(() => {
     setHydrated(true);
-    if (fromAi) setAiDesign(readQuoteHandoff());
-  }, [fromAi]);
+    // The 3D designer leaves a preview picture of the sign to attach.
+    if (fromAi || fromStudio) setAiDesign(readQuoteHandoff());
+  }, [fromAi, fromStudio]);
 
   const product = assets.products.find((p) => p.type === 'TEXT_NEON');
   const colors = new Map(assets.colors.map((c) => [c.id, c]));
@@ -122,7 +123,7 @@ export function QuoteRequestForm({
       </Field>
       <p className="-mt-2 flex items-center gap-2 text-sm text-muted">
         <ImageIcon className="size-4" /> For a logo,{' '}
-        <Link href="/studio?mode=logo" className="font-semibold text-neon-cyan hover:underline">
+        <Link href="/studio?mode=logo" className="font-semibold link">
           upload it in the logo studio
         </Link>
       </p>
@@ -164,7 +165,7 @@ export function QuoteRequestForm({
           {/* eslint-disable-next-line @next/next/no-img-element -- a picture made in this browser */}
           <img src={aiDesign.image} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
           <span className="min-w-0 text-sm">
-            <span className="block font-semibold">Include my AI design</span>
+            <span className="block font-semibold">Include my preview picture</span>
             <span className="block truncate text-muted">{aiDesign.title}</span>
           </span>
         </label>
@@ -215,7 +216,7 @@ export function QuoteRequestForm({
           rows={5}
           maxLength={2000}
           required={!design}
-          defaultValue={aiDesign ? `From the AI designer: ${aiDesign.prompt}`.slice(0, 2000) : undefined}
+          defaultValue={aiDesign ? `Design: ${aiDesign.prompt}`.slice(0, 2000) : undefined}
         />
       </Field>
 

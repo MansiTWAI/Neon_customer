@@ -46,7 +46,7 @@ describe('NeonSign3D', () => {
         onUnavailable={onUnavailable}
       />,
     );
-    expect(screen.getByRole('alert').textContent).toContain('cannot show 3D');
+    expect(screen.getByRole('alert').textContent).toContain('cannot show the 3D preview');
     expect(onUnavailable).toHaveBeenCalledOnce();
   });
 

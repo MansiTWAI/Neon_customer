@@ -1,6 +1,8 @@
 import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import { CATEGORY_SCENES } from '@/content/sign-photos';
 import { notFound } from 'next/navigation';
 import { IdeaCard } from '@/components/home/idea-card';
 import { ProductGrid } from '@/components/shop/product-card';
@@ -27,25 +29,45 @@ export default async function UsePage({ params }: UsePageProps) {
   const page = USE_CASES[(await params).use];
   if (!page) notFound();
   const products = await fetchProducts({ tag: page.tag }).catch(() => []);
+  const scene = CATEGORY_SCENES[(await params).use];
 
   return (
     <>
-      <section className="border-b border-white/5 bg-[radial-gradient(ellipse_at_top,#2a1020,#0b0b12_65%)]">
-        <div className="mx-auto max-w-7xl px-4 py-16 md:py-24">
-          <p className="text-sm font-semibold tracking-widest text-neon-cyan uppercase">{page.title}</p>
-          <h1 className="mt-3 max-w-2xl font-display text-4xl font-bold md:text-5xl">{page.headline}</h1>
-          <p className="mt-4 max-w-xl text-lg text-muted">{page.intro}</p>
-          <Link
-            href="/studio"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-neon-pink px-6 py-3 font-bold text-white transition hover:shadow-neon"
-          >
-            Design yours <ArrowRight className="size-4" />
-          </Link>
+      <section className="border-b border-white/5 bg-night-950">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 md:grid-cols-[1fr_1.15fr] md:py-16">
+          <div>
+            <p className="eyebrow">{page.title}</p>
+            <h1 className="mt-3 font-display text-4xl font-bold tracking-tight md:text-5xl">
+              {page.headline}
+            </h1>
+            <p className="mt-4 max-w-md text-lg text-muted">{page.intro}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/create" className="btn-primary">
+                Design yours <ArrowRight className="size-4" />
+              </Link>
+              <Link href="/shop" className="btn-outline">
+                Shop ready-made
+              </Link>
+            </div>
+          </div>
+          {scene && (
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+              <Image
+                src={scene}
+                alt={`A neon sign in a ${page.label.toLowerCase()} setting`}
+                fill
+                priority
+                sizes="(min-width: 768px) 55vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+          )}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-14">
-        <h2 className="font-display text-2xl font-semibold">Start from an idea</h2>
+        <p className="eyebrow">Ideas</p>
+        <h2 className="mt-2 font-display text-2xl font-semibold">Start from an idea</h2>
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {page.ideas.map((idea) => (
             <IdeaCard

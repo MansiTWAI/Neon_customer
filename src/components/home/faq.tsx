@@ -28,11 +28,17 @@ export const HOME_QUESTIONS: Question[] = [
   },
 ];
 
-export function Faq({ questions = HOME_QUESTIONS }: { questions?: Question[] }) {
+export function Faq({
+  questions = HOME_QUESTIONS,
+  className = '',
+}: {
+  questions?: Question[];
+  className?: string;
+}) {
   return (
-    <div className="mt-8 divide-y divide-white/5 rounded-2xl border border-white/5 bg-night-800">
+    <div className={`divide-y divide-white/10 border-y border-white/10 ${className}`}>
       {questions.map(({ q, a }) => (
-        <details key={q} className="group px-5 py-4">
+        <details key={q} className="group py-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
             {q}
             <ChevronDown className="size-4 shrink-0 text-muted transition group-open:rotate-180" />

@@ -58,7 +58,7 @@ export function PincodeCheck() {
           {result.serviceable ? (
             <>
               <li className="flex items-center gap-2">
-                <Truck className="size-4 text-neon-cyan" />
+                <Truck className="size-4 text-ink/70" />
                 Delivered in {result.deliveryDays!.min}–{result.deliveryDays!.max} days
                 {result.place && ` to ${result.place.city}`}
               </li>

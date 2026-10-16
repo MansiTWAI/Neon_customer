@@ -10,5 +10,5 @@ export function OpenSharedDesign({ design }: { design: DesignInput }) {
   const handoff = handoffFromDesign(design);
   if (!handoff) return null;
 
-  return <Button onClick={() => router.push(openInStudio(handoff))}>Make it yours in the studio</Button>;
+  return <Button onClick={() => router.push(openInStudio(handoff))}>Make it yours</Button>;
 }

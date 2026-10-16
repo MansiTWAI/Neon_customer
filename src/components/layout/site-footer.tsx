@@ -7,9 +7,9 @@ const COLUMNS = [
     title: 'Shop',
     links: [
       { href: '/shop', label: 'All signs' },
-      { href: '/studio', label: 'Design your sign' },
+      { href: '/create', label: 'Design your sign in 3D' },
+      { href: '/studio', label: '2D studio and wall photo' },
       { href: '/studio?mode=logo', label: 'Logo signs' },
-      { href: '/create', label: 'AI designer' },
       { href: '/quote', label: 'Bulk and large orders' },
     ],
   },

@@ -35,9 +35,22 @@ interface PriceBarProps {
   request: PriceRequest;
   snapshotRef: RefObject<Snapshot | null>;
   minimumPaise: number;
+  /** Where to come back to after signing in to save the design. */
+  returnTo?: string;
+  /** Called just before going to the quotation form, e.g. to attach a preview picture. */
+  onQuote?: () => void;
 }
 
-export function PriceBar({ price, design, display, request, snapshotRef, minimumPaise }: PriceBarProps) {
+export function PriceBar({
+  price,
+  design,
+  display,
+  request,
+  snapshotRef,
+  minimumPaise,
+  returnTo = '/studio',
+  onQuote,
+}: PriceBarProps) {
   const router = useRouter();
   const [showBreakup, setShowBreakup] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>({ status: 'idle' });
@@ -89,7 +102,7 @@ export function PriceBar({ price, design, display, request, snapshotRef, minimum
     } catch (error) {
       // The design is kept in this browser, so signing in brings the customer straight back to it.
       if (error instanceof ApiError && error.status === 401) {
-        router.push('/login?next=/studio');
+        router.push(`/login?next=${encodeURIComponent(returnTo)}`);
         return;
       }
       setFeedback({ status: 'error', message: messageOf(error) });
@@ -103,53 +116,56 @@ export function PriceBar({ price, design, display, request, snapshotRef, minimum
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
         {price.status === 'OK' && (
           <>
-            <div className="min-w-0 text-sm text-muted">
-              <span className="hidden sm:inline">
-                {price.areaSqft.toFixed(2)} sq ft
-                {price.billableSqft !== price.areaSqft && `, billed as ${price.billableSqft.toFixed(2)}`}
-                {' · '}
-              </span>
-              <button
-                onClick={() => setShowBreakup((open) => !open)}
-                aria-expanded={showBreakup}
-                className="inline-flex items-center gap-1 font-semibold text-neon-cyan hover:underline"
-              >
-                Price breakup
-                {showBreakup ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
-              </button>
-            </div>
-            <div className="ml-auto text-right">
+            <div className="min-w-0">
               <div
                 key={price.payablePaise}
-                className="animate-flicker-on font-display text-2xl font-bold tabular-nums"
+                className="font-display text-xl font-bold tabular-nums sm:text-2xl"
               >
                 {formatINR(price.payablePaise)}
               </div>
-              <div className="text-xs text-muted">incl. GST</div>
+              <div className="text-xs text-muted">
+                incl. GST
+                <span className="hidden sm:inline">
+                  {' · '}
+                  {price.areaSqft.toFixed(2)} sq ft
+                  {price.billableSqft !== price.areaSqft && `, billed as ${price.billableSqft.toFixed(2)}`}
+                </span>
+                {' · '}
+                <button
+                  onClick={() => setShowBreakup((open) => !open)}
+                  aria-expanded={showBreakup}
+                  className="inline-flex items-center gap-0.5 font-semibold link"
+                >
+                  Price breakup
+                  {showBreakup ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={!design || busy}
-              aria-label="Save design"
-              title="Save to your designs"
-              className="grid size-12 place-items-center rounded-full border border-white/15 text-muted transition hover:border-white/40 hover:text-ink disabled:opacity-50"
-            >
-              {feedback.status === 'working' && feedback.action === 'save' ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Bookmark className="size-4" />
-              )}
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={!design || busy}
-              className="inline-flex items-center gap-2 rounded-full bg-neon-pink px-6 py-3 font-bold text-white transition hover:shadow-neon active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
-            >
-              {feedback.status === 'working' && feedback.action === 'add' && (
-                <LoaderCircle className="size-4 animate-spin" />
-              )}
-              Add to cart
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={handleSave}
+                disabled={!design || busy}
+                aria-label="Save design"
+                title="Save to your designs"
+                className="grid size-11 place-items-center rounded-full border border-white/15 text-muted transition hover:border-white/40 hover:text-ink disabled:opacity-50 sm:size-12"
+              >
+                {feedback.status === 'working' && feedback.action === 'save' ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Bookmark className="size-4" />
+                )}
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={!design || busy}
+                className="inline-flex items-center gap-2 rounded-full bg-neon-pink px-5 py-3 font-bold whitespace-nowrap text-white transition hover:shadow-neon active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none sm:px-6"
+              >
+                {feedback.status === 'working' && feedback.action === 'add' && (
+                  <LoaderCircle className="size-4 animate-spin" />
+                )}
+                Add to cart
+              </button>
+            </div>
           </>
         )}
 
@@ -160,6 +176,7 @@ export function PriceBar({ price, design, display, request, snapshotRef, minimum
             </p>
             <Link
               href={`/quote?kind=${price.reason === 'MAX_QTY_EXCEEDED' ? 'BULK' : 'LARGE'}&from=studio`}
+              onClick={onQuote}
               className="ml-auto rounded-full bg-neon-pink px-6 py-3 font-bold text-white transition hover:shadow-neon"
             >
               Get a quote

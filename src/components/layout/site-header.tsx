@@ -8,9 +8,9 @@ import { useCart } from '@/stores/cart-store';
 
 const NAV = [
   { href: '/shop', label: 'Shop' },
-  { href: '/studio', label: 'Design your sign' },
+  { href: '/create', label: 'Design your sign' },
   { href: '/studio?mode=logo', label: 'Logo signs' },
-  { href: '/create', label: 'AI designer' },
+  { href: '/neon-for/business', label: 'For business' },
   { href: '/faq', label: 'Help' },
 ];
 
@@ -38,6 +38,12 @@ export function SiteHeader() {
           ))}
         </div>
         <div className="ml-auto flex items-center gap-1">
+          <Link
+            href="/create"
+            className="mr-2 hidden rounded-full bg-neon-pink px-4 py-2 text-sm font-semibold text-white transition hover:shadow-neon lg:inline-block"
+          >
+            Design yours
+          </Link>
           <Link href="/search" className={iconLink} aria-label="Search">
             <Search className="size-5" />
           </Link>

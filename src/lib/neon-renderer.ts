@@ -15,7 +15,19 @@ import { segmentLine, type NeonSymbol } from './neon-symbols';
  * AI, so names are always spelled right; an AI picture can be used as the wall.
  */
 
-export type WallId = 'brick' | 'concrete' | 'plaster' | 'wood' | 'dark';
+export const WALL_IDS = [
+  'brick',
+  'concrete',
+  'plaster',
+  'pastel',
+  'wood',
+  'slats',
+  'tiles',
+  'drapes',
+  'panels',
+  'dark',
+] as const;
+export type WallId = (typeof WALL_IDS)[number];
 export type Backboard = 'clear' | 'black' | 'none';
 export type LineSize = 'lg' | 'md' | 'sm';
 
@@ -27,13 +39,26 @@ export interface NeonDesign {
   backboard: Backboard;
   /** A built-in wall, or a picture (data URL) to hang the sign on. */
   wall: WallId | { image: string };
+  /** How the scene is lit; changing it never re-bends the tubes. Defaults to { sign: 1, room: 1 }. */
+  lighting?: Lighting;
 }
+
+export interface Lighting {
+  /** The sign's own light: 0 is switched off (the tubes as they look unlit), 1 is normal, up to 1.5. */
+  sign: number;
+  /** The room's light: 0.5 is a dark room, 1 is a dim evening, up to 3 for daylight. */
+  room: number;
+}
+
+const BASE = { ambient: 0.32, key: 0.3, bloom: 1.1, picture: 0.42 };
 
 export interface BuildReport {
   /** Characters the chosen font has no letter for, and emojis without a neon symbol. */
   skipped: string[];
   /** Nothing to draw: no words or symbols the sign can show. */
   empty: boolean;
+  /** Height ÷ width of the lettering, for working out the finished sign's size and price. */
+  aspect: number;
 }
 
 const LINE_SIZES: Record<LineSize, number> = { lg: 100, md: 66, sm: 46 };
@@ -50,19 +75,39 @@ export class NeonRenderer {
   private readonly controls: OrbitControls;
   private readonly composer: EffectComposer;
   private readonly bloom: UnrealBloomPass;
+  private readonly key: THREE.DirectionalLight;
+  private readonly ambient = new THREE.HemisphereLight('#c9d2ff', '#1a1410', BASE.ambient);
+  private lighting: Lighting = { sign: 1, room: 1 };
   private readonly sign = new THREE.Group();
+  /** One merged mesh per line, so a colour change only touches its material. */
+  private readonly tubes = new THREE.Group();
+  private backboard: THREE.Group | null = null;
+  private backboardKind: Backboard | null = null;
   private readonly wallMaterial = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
   private readonly wall: THREE.Mesh;
   private readonly glow: THREE.Mesh;
   /** Lights between the sign and the wall: the wash a real neon sign throws on the wall behind it. */
   private readonly lights = [0, 1, 2, 3, 4].map(() => new THREE.PointLight('#ffffff', 0, 0, 2));
   private wallKey = '';
+  /** Width ÷ height of the wall picture, or null for a repeating built-in wall. */
+  private pictureAspect: number | null = null;
+  private font: Font | null = null;
+  private layout = '';
+  private report: BuildReport = { skipped: [], empty: true, aspect: 0.4 };
+  private size = { width: 0, height: 0 };
   private frame = 0;
   private disposed = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Phones get fewer pixels and a smaller shadow map: the glow hides the difference.
+    const light = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !light,
+      preserveDrawingBuffer: true,
+      powerPreference: 'high-performance',
+    });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, light ? 1.5 : 2));
     // Neutral keeps the colour of bright tubes; ACES turns cyan and warm white to plain white.
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 0.9;
@@ -72,10 +117,15 @@ export class NeonRenderer {
 
     this.scene.background = new THREE.Color('#050507');
     // A dim room, as in real neon photos, so the tubes carry the picture.
-    this.scene.add(new THREE.HemisphereLight('#c9d2ff', '#1a1410', 0.32));
-    const key = new THREE.DirectionalLight('#fff4e6', 0.22);
-    key.position.set(-6, 8, 10);
-    this.scene.add(key);
+    this.scene.add(this.ambient);
+    // A soft room light from above left: it gives the standoffs and the board their shadows.
+    this.key = new THREE.DirectionalLight('#fff4e6', BASE.key);
+    this.key.position.set(-6, 8, 10);
+    this.key.castShadow = true;
+    this.key.shadow.mapSize.set(light ? 512 : 1024, light ? 512 : 1024);
+    this.key.shadow.radius = 4;
+    this.key.shadow.bias = -0.0008;
+    this.scene.add(this.key, this.key.target);
 
     this.wall = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.wallMaterial);
     this.wall.position.z = WALL_Z;
@@ -96,12 +146,15 @@ export class NeonRenderer {
     this.glow.position.z = WALL_Z + 0.01;
     this.scene.add(this.glow);
 
-    for (const light of this.lights) this.scene.add(light);
+    for (const point of this.lights) this.scene.add(point);
+    this.sign.add(this.tubes);
     this.scene.add(this.sign);
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.85, 0.5, 0.5);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), BASE.bloom, 0, 0.62);
+    // Strong close halo, little wide haze: the widest blur levels otherwise tint the whole frame.
+    this.bloom.compositeMaterial.uniforms.bloomFactors!.value = [1, 0.75, 0.4, 0.14, 0.05];
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
@@ -115,144 +168,31 @@ export class NeonRenderer {
     this.controls.addEventListener('change', () => this.invalidate());
   }
 
-  /** Builds the sign from the design and the font, replacing any earlier one. */
+  /**
+   * Shows the design. The tubes are bent again only when the words, sizes, alignment, thickness or
+   * font change; colours, the backboard and the wall are updated in place, which is instant.
+   */
   async build(design: NeonDesign, font: Font): Promise<BuildReport> {
-    const skipped = new Set<string>();
-    const tubes = new Map<string, Contour[]>();
-    const rows: { contours: { color: string; contour: Contour }[]; width: number; height: number }[] = [];
-
-    for (const line of design.lines) {
-      const size = LINE_SIZES[line.size];
-      const { segments, unsupported } = segmentLine(line.text);
-      for (const grapheme of unsupported) skipped.add(grapheme);
-      const row: (typeof rows)[number] = { contours: [], width: 0, height: size };
-      let x = 0;
-      for (const segment of segments) {
-        if (segment.kind === 'symbol') {
-          const { contours, width } = symbolContours(
-            segment.symbol!,
-            size * 0.92,
-            x + size * 0.06,
-            -size * 0.78,
-          );
-          for (const contour of contours) row.contours.push({ color: line.color, contour });
-          x += width + size * 0.18;
-          continue;
-        }
-        // Whole letters (a Hindi syllable is several code points) are kept or left out together.
-        const text = graphemes(segment.text)
-          .filter((letter) => {
-            if (letter === ' ' || [...letter].every((char) => font.charToGlyphIndex(char) > 0)) return true;
-            skipped.add(letter);
-            return false;
-          })
-          .join('');
-        if (!text) continue;
-        const path = font.getPath(text, x, 0, size, { kerning: true });
-        for (const contour of commandsToContours(path.commands))
-          row.contours.push({ color: line.color, contour });
-        x += font.getAdvanceWidth(text, size, { kerning: true });
-      }
-      row.width = x;
-      if (row.contours.length) rows.push(row);
+    const layout = JSON.stringify([
+      design.lines.map((line) => [line.text, line.size]),
+      design.align,
+      design.thickness,
+    ]);
+    const reshaped = font !== this.font || layout !== this.layout;
+    if (reshaped) {
+      this.report = this.bend(design, font);
+      this.font = font;
+      this.layout = layout;
+      this.backboardKind = null;
     }
-
-    this.clearSign();
-    if (!rows.length) {
-      this.invalidate();
-      return { skipped: [...skipped], empty: true };
-    }
-
-    // Stack the rows, measure everything, then centre and scale to a fixed span.
-    const gap = 0.32;
-    let y = 0;
-    const placed: { color: string; contour: Contour }[] = [];
-    const widest = Math.max(...rows.map((row) => row.width));
-    for (const row of rows) {
-      y += row.height;
-      const shift =
-        design.align === 'left'
-          ? 0
-          : design.align === 'right'
-            ? widest - row.width
-            : (widest - row.width) / 2;
-      for (const { color, contour } of row.contours) {
-        placed.push({
-          color,
-          contour: {
-            closed: contour.closed,
-            points: contour.points.map((point) => new THREE.Vector2(point.x + shift, point.y + y)),
-          },
-        });
-      }
-      y += row.height * gap;
-    }
-    const box = new THREE.Box2();
-    for (const { contour } of placed) for (const point of contour.points) box.expandByPoint(point);
-    const size = box.getSize(new THREE.Vector2());
-    const centre = box.getCenter(new THREE.Vector2());
-    const scale = SIGN_SPAN / Math.max(size.x, size.y * 1.4);
-
-    for (const { color, contour } of placed) {
-      const points = contour.points.map(
-        (point) => new THREE.Vector2((point.x - centre.x) * scale, -(point.y - centre.y) * scale),
-      );
-      const list = tubes.get(color) ?? [];
-      list.push({ closed: contour.closed, points });
-      tubes.set(color, list);
-    }
-
-    const width = size.x * scale;
-    const height = size.y * scale;
-    const radius = 0.055 * design.thickness;
-    const colors: THREE.Color[] = [];
-    for (const [hex, contours] of tubes) {
-      const geometries = contours
-        .map((contour) => tubeGeometry(contour, radius))
-        .filter((g): g is THREE.TubeGeometry => !!g);
-      if (!geometries.length) continue;
-      const color = new THREE.Color(hex);
-      colors.push(color);
-      const merged = mergeGeometries(geometries);
-      for (const geometry of geometries) geometry.dispose();
-      // A coloured silicone sleeve that glows from inside: bright, slightly whiter at the core.
-      const tube = new THREE.Mesh(
-        merged,
-        new THREE.MeshStandardMaterial({
-          color: color.clone().lerp(new THREE.Color('#ffffff'), 0.08),
-          emissive: color,
-          // Bright colours (cyan, yellow, white) need less push than deep ones to look equally lit.
-          emissiveIntensity: emissiveFor(color),
-          roughness: 0.3,
-          metalness: 0,
-        }),
-      );
-      tube.castShadow = true;
-      this.sign.add(tube);
-    }
-
-    if (design.backboard !== 'none') this.sign.add(backboardMesh(width, height, design.backboard));
-
-    // Light the wall in the sign's own colour.
-    const average = colors
-      .reduce((sum, c) => sum.add(c), new THREE.Color(0, 0, 0))
-      .multiplyScalar(1 / colors.length);
-    this.lights.forEach((light, index) => {
-      light.color.copy(average);
-      light.intensity = (0.27 + width * 0.018) * (index === 0 || index === 4 ? 0.8 : 1);
-      light.distance = Math.max(width, height) * 1.4 + 3;
-      // Spread along the sign and kept well off the wall, so the wash is even rather than one hot spot.
-      light.position.set((index - 2) * width * 0.22, 0, -0.26);
-    });
-    const glowMaterial = this.glow.material as THREE.MeshBasicMaterial;
-    glowMaterial.color.copy(average).multiplyScalar(0.14);
-    this.glow.scale.set(width * 1.9 + 3, height * 2.2 + 3, 1);
-
-    this.wall.scale.set(Math.max(width, height) * 4 + 16, Math.max(width, height) * 4 + 16, 1);
+    this.lighting = design.lighting ?? { sign: 1, room: 1 };
+    this.colour(design);
+    this.light();
+    this.setBackboard(this.report.empty ? 'none' : design.backboard);
     await this.setWall(design.wall);
-    this.fit(width, height);
+    if (reshaped) this.fit(this.size.width, this.size.height);
     this.invalidate();
-    return { skipped: [...skipped], empty: false };
+    return this.report;
   }
 
   /** Matches the drawing size to the canvas's size on the page. */
@@ -261,6 +201,7 @@ export class NeonRenderer {
     this.composer.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    this.layoutWall();
     this.invalidate();
   }
 
@@ -281,7 +222,7 @@ export class NeonRenderer {
     return blob;
   }
 
-  /** A JPEG data URL of the current view, for attaching to a quotation. */
+  /** A JPEG data URL of the current view, for attaching to a quotation or a cart line. */
   snapshot(maxSide = 1280): string {
     this.composer.render();
     const copy = document.createElement('canvas');
@@ -296,8 +237,15 @@ export class NeonRenderer {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.controls.dispose();
-    this.clearSign();
+    disposeTree(this.tubes);
+    if (this.backboard) disposeTree(this.backboard);
     this.wallMaterial.map?.dispose();
+    this.wallMaterial.dispose();
+    this.wall.geometry.dispose();
+    const glow = this.glow.material as THREE.MeshBasicMaterial;
+    glow.map?.dispose();
+    glow.dispose();
+    this.glow.geometry.dispose();
     this.composer.dispose();
     this.renderer.dispose();
   }
@@ -312,16 +260,221 @@ export class NeonRenderer {
     });
   }
 
+  /** Lays the words and symbols out and bends them into tubes, one mesh per line. */
+  private bend(design: NeonDesign, font: Font): BuildReport {
+    const skipped = new Set<string>();
+    const rows: { line: number; contours: Contour[]; width: number; height: number }[] = [];
+
+    design.lines.forEach((line, index) => {
+      const size = LINE_SIZES[line.size];
+      const { segments, unsupported } = segmentLine(line.text);
+      for (const grapheme of unsupported) skipped.add(grapheme);
+      const row: (typeof rows)[number] = { line: index, contours: [], width: 0, height: size };
+      let x = 0;
+      for (const segment of segments) {
+        if (segment.kind === 'symbol') {
+          const { contours, width } = symbolContours(
+            segment.symbol!,
+            size * 0.92,
+            x + size * 0.06,
+            -size * 0.78,
+          );
+          row.contours.push(...contours);
+          x += width + size * 0.18;
+          continue;
+        }
+        // Whole letters (a Hindi syllable is several code points) are kept or left out together.
+        const text = graphemes(segment.text)
+          .filter((letter) => {
+            if (letter === ' ' || [...letter].every((char) => font.charToGlyphIndex(char) > 0)) return true;
+            skipped.add(letter);
+            return false;
+          })
+          .join('');
+        if (!text) continue;
+        const path = font.getPath(text, x, 0, size, { kerning: true });
+        row.contours.push(...commandsToContours(path.commands));
+        x += font.getAdvanceWidth(text, size, { kerning: true });
+      }
+      row.width = x;
+      if (row.contours.length) rows.push(row);
+    });
+
+    disposeTree(this.tubes);
+    if (!rows.length) {
+      this.size = { width: 0, height: 0 };
+      return { skipped: [...skipped], empty: true, aspect: 0.4 };
+    }
+
+    // Stack the rows, measure everything, then centre and scale to a fixed span.
+    const gap = 0.32;
+    let y = 0;
+    const placed: { line: number; contour: Contour }[] = [];
+    const widest = Math.max(...rows.map((row) => row.width));
+    for (const row of rows) {
+      y += row.height;
+      const shift =
+        design.align === 'left'
+          ? 0
+          : design.align === 'right'
+            ? widest - row.width
+            : (widest - row.width) / 2;
+      for (const contour of row.contours) {
+        placed.push({
+          line: row.line,
+          contour: {
+            closed: contour.closed,
+            points: contour.points.map((point) => new THREE.Vector2(point.x + shift, point.y + y)),
+          },
+        });
+      }
+      y += row.height * gap;
+    }
+    const box = new THREE.Box2();
+    for (const { contour } of placed) for (const point of contour.points) box.expandByPoint(point);
+    const size = box.getSize(new THREE.Vector2());
+    const centre = box.getCenter(new THREE.Vector2());
+    const scale = SIGN_SPAN / Math.max(size.x, size.y * 1.4);
+
+    const radius = 0.055 * design.thickness;
+    // The silicone channel the LED strip sits in: unlit, so the sign keeps a dark edge from the side.
+    const channel = new THREE.MeshStandardMaterial({ color: '#141416', roughness: 0.65, metalness: 0 });
+    for (const row of rows) {
+      const geometries = placed
+        .filter((item) => item.line === row.line)
+        .map(({ contour }) =>
+          tubeGeometry(
+            {
+              closed: contour.closed,
+              points: contour.points.map(
+                (point) => new THREE.Vector2((point.x - centre.x) * scale, -(point.y - centre.y) * scale),
+              ),
+            },
+            radius,
+          ),
+        )
+        .filter((g): g is THREE.TubeGeometry => !!g);
+      if (!geometries.length) continue;
+      const merged = mergeGeometries(geometries);
+      for (const geometry of geometries) geometry.dispose();
+      // A coloured silicone sleeve that glows from inside; its colour is set in colour().
+      const tube = new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0 }));
+      tube.castShadow = true;
+      tube.userData.line = row.line;
+      const back = new THREE.Mesh(merged, channel);
+      back.position.z = -radius * 0.9;
+      back.scale.z = 0.8;
+      back.castShadow = true;
+      this.tubes.add(tube, back);
+    }
+
+    this.size = { width: size.x * scale, height: size.y * scale };
+    return { skipped: [...skipped], empty: false, aspect: size.y / size.x };
+  }
+
+  /** Sets each line's tube colour and tints the light the sign throws on the wall. */
+  private colour(design: NeonDesign) {
+    const used: THREE.Color[] = [];
+    for (const child of this.tubes.children) {
+      if (!(child instanceof THREE.Mesh) || typeof child.userData.line !== 'number') continue;
+      const hex = design.lines[child.userData.line as number]?.color ?? '#ffffff';
+      const color = new THREE.Color(hex);
+      used.push(color);
+      const material = child.material as THREE.MeshStandardMaterial;
+      material.color.copy(color).lerp(new THREE.Color('#ffffff'), 0.08);
+      material.emissive.copy(color);
+      // Bright colours (cyan, yellow, white) need less push than deep ones to look equally lit.
+      material.emissiveIntensity = emissiveFor(color) * this.lighting.sign;
+    }
+    const { width, height } = this.size;
+    const average = used.length
+      ? used.reduce((sum, c) => sum.add(c), new THREE.Color(0, 0, 0)).multiplyScalar(1 / used.length)
+      : new THREE.Color(0, 0, 0);
+    this.lights.forEach((point, index) => {
+      point.color.copy(average);
+      point.intensity = used.length
+        ? (0.22 + width * 0.012) * (index === 0 || index === 4 ? 0.8 : 1) * this.lighting.sign
+        : 0;
+      // A short reach, so the wash pools around the sign and the far wall stays in shadow.
+      point.distance = Math.max(width, height) * 0.7 + 2.5;
+      // Spread along the sign and kept well off the wall, so the wash is even rather than one hot spot.
+      point.position.set((index - 2) * width * 0.22, 0, -0.26);
+    });
+    const glowMaterial = this.glow.material as THREE.MeshBasicMaterial;
+    glowMaterial.color.copy(average).multiplyScalar(0.09 * this.lighting.sign);
+    this.glow.scale.set(width * 1.9 + 3, height * 2.2 + 3, 1);
+  }
+
+  /** The room's light and the strength of the glow, from the current lighting. */
+  private light() {
+    const { sign, room } = this.lighting;
+    this.ambient.intensity = BASE.ambient * room;
+    this.key.intensity = BASE.key * room;
+    // Switched off, the tubes should not glow at all; dimmed, the halo shrinks with them.
+    this.bloom.strength = BASE.bloom * Math.min(1, sign);
+    if (this.wallMaterial.emissiveMap) this.wallMaterial.emissiveIntensity = this.pictureLight();
+  }
+
+  private pictureLight(): number {
+    return Math.min(1, BASE.picture * this.lighting.room);
+  }
+
+  private setBackboard(kind: Backboard) {
+    if (kind === this.backboardKind) return;
+    this.backboardKind = kind;
+    if (this.backboard) {
+      this.sign.remove(this.backboard);
+      disposeTree(this.backboard);
+      this.backboard = null;
+    }
+    if (kind === 'none') return;
+    this.backboard = backboardMesh(this.size.width, this.size.height, kind);
+    this.sign.add(this.backboard);
+  }
+
   private fit(width: number, height: number) {
     const fov = THREE.MathUtils.degToRad(this.camera.fov);
-    const fitHeight = (height + 2.2) / 2 / Math.tan(fov / 2);
-    const fitWidth = (width + 2.6) / 2 / Math.tan(fov / 2) / Math.max(this.camera.aspect, 0.4);
+    // Framed like a product photo: the sign with a generous margin of lit wall around it.
+    const fitHeight = (height * 1.45 + 2.5) / 2 / Math.tan(fov / 2);
+    const fitWidth = (width * 1.3 + 3) / 2 / Math.tan(fov / 2) / Math.max(this.camera.aspect, 0.4);
     const distance = Math.max(fitHeight, fitWidth, 6);
     this.camera.position.set(distance * 0.16, distance * 0.05, distance);
     this.controls.target.set(0, 0, 0);
     this.controls.minDistance = distance * 0.6;
     this.controls.maxDistance = distance * 1.6;
     this.controls.update();
+    // Keep the shadow camera just around the sign, so its shadows stay crisp.
+    const reach = Math.max(width, height) / 2 + 2;
+    const shadow = this.key.shadow.camera;
+    shadow.left = shadow.bottom = -reach;
+    shadow.right = shadow.top = reach;
+    shadow.near = 1;
+    shadow.far = 40;
+    shadow.updateProjectionMatrix();
+    this.layoutWall();
+  }
+
+  /**
+   * Built-in walls repeat, so they simply fill a large plane. A picture is scaled to cover what
+   * the camera can see at its furthest, without being stretched out of shape.
+   */
+  private layoutWall() {
+    const reach = Math.max(this.size.width, this.size.height);
+    if (this.pictureAspect === null) {
+      const side = reach * 4 + 16;
+      this.wall.scale.set(side, side, 1);
+      // Keep the wall's pattern at a real-world size: a brick is about a quarter of a sign's height.
+      const map = this.wallMaterial.map;
+      if (map) map.repeat.set(side / 12, side / 12);
+      return;
+    }
+    const fov = THREE.MathUtils.degToRad(this.camera.fov);
+    const distance = (this.controls.maxDistance || this.camera.position.length()) - WALL_Z;
+    // A little extra so turning the sign does not show the picture's edge.
+    const viewHeight = 2 * Math.tan(fov / 2) * distance * 1.15;
+    const viewWidth = viewHeight * this.camera.aspect;
+    const height = Math.max(viewHeight, viewWidth / this.pictureAspect);
+    this.wall.scale.set(height * this.pictureAspect, height, 1);
   }
 
   private async setWall(wall: NeonDesign['wall']) {
@@ -332,30 +485,50 @@ export class NeonRenderer {
       typeof wall === 'string'
         ? wallTexture(wall)
         : await new THREE.TextureLoader().loadAsync(wall.image).catch(() => wallTexture('dark'));
-    texture.colorSpace = THREE.SRGBColorSpace;
-    if (typeof wall === 'string') {
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(3, 3);
+    // Another wall was chosen while this picture was loading.
+    if (key !== this.wallKey || this.disposed) {
+      texture.dispose();
+      return;
     }
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const picture = typeof wall !== 'string' && texture.image instanceof HTMLImageElement;
+    if (picture) {
+      const image = texture.image as HTMLImageElement;
+      this.pictureAspect = image.naturalWidth / Math.max(1, image.naturalHeight);
+    } else {
+      this.pictureAspect = null;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    }
+    texture.anisotropy = Math.min(4, this.renderer.capabilities.getMaxAnisotropy());
     this.wallMaterial.map?.dispose();
     this.wallMaterial.map = texture;
-    // Pictures are shown brighter than textured walls, which are lit only by the sign and the room.
-    this.wallMaterial.color.set(typeof wall === 'string' ? '#ffffff' : '#bdbdbd');
+    // A room picture keeps its own light, shown as an evening photo, and the sign's glow adds to it.
+    // Built-in walls are lit only by the sign and the dim room.
+    this.wallMaterial.color.set(picture ? '#6e6e6e' : '#ffffff');
+    this.wallMaterial.emissiveMap = picture ? texture : null;
+    this.wallMaterial.emissive.set(picture ? '#ffffff' : '#000000');
+    this.wallMaterial.emissiveIntensity = picture ? this.pictureLight() : 0;
     this.wallMaterial.needsUpdate = true;
+    this.layoutWall();
+    this.invalidate();
   }
+}
 
-  private clearSign() {
-    for (const child of [...this.sign.children]) {
-      this.sign.remove(child);
-      child.traverse((node) => {
-        if (node instanceof THREE.Mesh) {
-          node.geometry.dispose();
-          (Array.isArray(node.material) ? node.material : [node.material]).forEach((m: THREE.Material) =>
-            m.dispose(),
-          );
-        }
-      });
-    }
+function disposeTree(group: THREE.Object3D) {
+  const seen = new Set<unknown>();
+  for (const child of [...group.children]) {
+    group.remove(child);
+    child.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      for (const resource of [
+        node.geometry,
+        ...(Array.isArray(node.material) ? node.material : [node.material]),
+      ]) {
+        if (seen.has(resource)) continue;
+        seen.add(resource);
+        (resource as THREE.BufferGeometry | THREE.Material).dispose();
+      }
+    });
   }
 }
 
@@ -363,7 +536,7 @@ export class NeonRenderer {
 export function emissiveFor(color: THREE.Color): number {
   const luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
   // Aim every tube at the same glowing brightness, so the bloom treats all colours alike.
-  return THREE.MathUtils.clamp(0.55 / Math.max(luminance, 0.05), 0.8, 3.2);
+  return THREE.MathUtils.clamp(0.7 / Math.max(luminance, 0.05), 1, 3.6);
 }
 
 function graphemes(text: string): string[] {
@@ -558,7 +731,11 @@ function radialTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(canvas);
 }
 
-/** Wall surfaces drawn in code: brick, concrete, plaster, wood panels and a dark matte wall. */
+/**
+ * Wall surfaces drawn in code, the places neon signs usually hang: brick, concrete, plaster, a
+ * pastel bedroom wall, wood, slatted panels, café tiles, wedding drapes, gaming panels and a dark
+ * matte wall.
+ */
 export function wallTexture(kind: WallId): THREE.CanvasTexture {
   const size = 512;
   const canvas = document.createElement('canvas');
@@ -623,6 +800,72 @@ export function wallTexture(kind: WallId): THREE.CanvasTexture {
       ctx.fillRect(plank * (size / 6), 0, 2, size);
     }
     noise(6000, 0.05);
+  } else if (kind === 'pastel') {
+    ctx.fillStyle = '#e8c9cf';
+    ctx.fillRect(0, 0, size, size);
+    noise(12000, 0.04);
+  } else if (kind === 'slats') {
+    ctx.fillStyle = '#1d140e';
+    ctx.fillRect(0, 0, size, size);
+    const slats = 16;
+    for (let slat = 0; slat < slats; slat++) {
+      const tone = 105 + random() * 25;
+      const x = slat * (size / slats);
+      const gradient = ctx.createLinearGradient(x, 0, x + size / slats, 0);
+      gradient.addColorStop(0, `rgb(${tone + 20},${tone * 0.68},${tone * 0.42})`);
+      gradient.addColorStop(1, `rgb(${tone - 5},${tone * 0.6},${tone * 0.36})`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x + 4, 0, size / slats - 8, size);
+    }
+    noise(5000, 0.05);
+  } else if (kind === 'tiles') {
+    ctx.fillStyle = '#b9b6ae';
+    ctx.fillRect(0, 0, size, size);
+    const rows = 16;
+    const h = size / rows;
+    for (let row = 0; row < rows; row++) {
+      for (let col = -1; col < 9; col++) {
+        const x = col * (size / 8) + (row % 2 ? size / 16 : 0);
+        const tone = 228 + random() * 14;
+        const gradient = ctx.createLinearGradient(0, row * h, 0, row * h + h);
+        gradient.addColorStop(0, `rgb(${tone},${tone},${tone - 4})`);
+        gradient.addColorStop(1, `rgb(${tone - 18},${tone - 18},${tone - 22})`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x + 2, row * h + 2, size / 8 - 4, h - 4);
+      }
+    }
+  } else if (kind === 'drapes') {
+    // Pleated fabric: soft light and shade across vertical folds.
+    const folds = 14;
+    for (let x = 0; x < size; x++) {
+      const fold = Math.sin((x / size) * folds * Math.PI * 2 + Math.sin(x / 37) * 0.6);
+      const tone = 205 + fold * 32;
+      ctx.fillStyle = `rgb(${tone},${tone * 0.94},${tone * 0.88})`;
+      ctx.fillRect(x, 0, 1, size);
+    }
+    noise(6000, 0.03);
+  } else if (kind === 'panels') {
+    // Hexagonal acoustic panels, as in gaming and streaming rooms.
+    ctx.fillStyle = '#0d0d12';
+    ctx.fillRect(0, 0, size, size);
+    const r = size / 8;
+    const w = Math.sqrt(3) * r;
+    for (let row = -1; row < 7; row++) {
+      for (let col = -1; col < 6; col++) {
+        const cx = col * w + (row % 2 ? w / 2 : 0);
+        const cy = row * r * 1.5;
+        const tone = 30 + random() * 14;
+        ctx.fillStyle = `rgb(${tone},${tone},${tone + 6})`;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = Math.PI / 6 + (i * Math.PI) / 3;
+          ctx.lineTo(cx + Math.cos(angle) * (r - 5), cy + Math.sin(angle) * (r - 5));
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    noise(7000, 0.04);
   } else {
     ctx.fillStyle = '#16161a';
     ctx.fillRect(0, 0, size, size);

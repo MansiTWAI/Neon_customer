@@ -100,10 +100,7 @@ export function AddressBook({
               )}
             </address>
             <div className="mt-4 flex gap-4">
-              <button
-                onClick={() => setEditing({ kind: 'edit', address })}
-                className="font-semibold text-neon-cyan hover:underline"
-              >
+              <button onClick={() => setEditing({ kind: 'edit', address })} className="font-semibold link">
                 Edit
               </button>
               <button

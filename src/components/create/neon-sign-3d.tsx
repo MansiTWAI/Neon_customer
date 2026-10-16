@@ -8,8 +8,8 @@ import { NeonRenderer, webglAvailable, type BuildReport, type NeonDesign } from 
 export interface NeonSign3DHandle {
   /** A high-resolution PNG of the current view. */
   exportPng: (longSide?: number) => Promise<Blob>;
-  /** A JPEG data URL small enough to attach to a quotation. */
-  snapshot: () => string | null;
+  /** A JPEG data URL small enough to attach to a quotation or keep with a cart line. */
+  snapshot: (maxSide?: number) => string | null;
 }
 
 const fonts = new Map<string, Promise<Font>>();
@@ -32,9 +32,18 @@ function loadFont(family: string): Promise<Font> {
 
 type State = { phase: 'loading' } | { phase: 'ready' } | { phase: 'error'; message: string };
 
+/** Compares designs cheaply: a wall picture is a long data URL, so only its length and tail are used. */
+function keyOf(design: NeonDesign): string {
+  const wall =
+    typeof design.wall === 'string'
+      ? design.wall
+      : `${design.wall.image.length}:${design.wall.image.slice(-48)}`;
+  return JSON.stringify({ ...design, wall });
+}
+
 /**
- * The customer's sign as a lit 3D neon sign. Drag to look at it from the side. Rebuilt a moment
- * after the words, font or settings change.
+ * The customer's sign as a lit 3D neon sign. Drag to look at it from the side. The renderer is made
+ * once; a change of words re-bends the tubes, while colours, backboard and wall update in place.
  */
 export function NeonSign3D({
   design,
@@ -62,14 +71,14 @@ export function NeonSign3D({
       if (!renderer.current) return Promise.reject(new Error('The 3D view is not ready'));
       return renderer.current.exportPng(longSide);
     },
-    snapshot: () => renderer.current?.snapshot() ?? null,
+    snapshot: (maxSide) => renderer.current?.snapshot(maxSide) ?? null,
   }));
 
   useEffect(() => {
     const element = canvas.current;
     if (!element) return;
     if (!webglAvailable()) {
-      const message = 'This browser cannot show 3D. Showing the flat design instead.';
+      const message = 'This browser cannot show the 3D preview.';
       setState({ phase: 'error', message });
       onUnavailable?.(message);
       return;
@@ -78,7 +87,7 @@ export function NeonSign3D({
     try {
       instance = new NeonRenderer(element);
     } catch {
-      const message = 'The 3D view could not start on this device. Showing the flat design instead.';
+      const message = 'The 3D preview could not start on this device.';
       setState({ phase: 'error', message });
       onUnavailable?.(message);
       return;
@@ -121,11 +130,11 @@ export function NeonSign3D({
             });
           }
         });
-    }, 150);
+    }, 90);
     return () => clearTimeout(timer);
     // `design` is rebuilt by the parent on every change; compare it by value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(design), fontFamily]);
+  }, [keyOf(design), fontFamily]);
 
   return (
     <div className="relative size-full">

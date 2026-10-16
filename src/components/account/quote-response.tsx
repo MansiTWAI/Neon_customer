@@ -80,7 +80,7 @@ export function QuoteResponse({ quoteId, addresses }: { quoteId: string; address
           </Field>
         ) : (
           <p className="text-sm">
-            <Link href="/account/addresses" className="font-semibold text-neon-cyan hover:underline">
+            <Link href="/account/addresses" className="font-semibold link">
               Add a delivery address
             </Link>{' '}
             first, then come back to accept.

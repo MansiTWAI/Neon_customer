@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { symbolFor } from '@/lib/neon-symbols';
 
 export const SIZE_PRESETS = { S: 18, M: 24, L: 36, XL: 48 } as const;
 export type SizePreset = keyof typeof SIZE_PRESETS | 'CUSTOM';
@@ -10,7 +11,12 @@ export const WIDTH_RANGE = { min: 12, max: 96 } as const;
 /** Background code used while the customer's own wall photo is shown. */
 export const WALL_PHOTO = 'PHOTO';
 
-const EMOJI = /\p{Extended_Pictographic}/gu;
+const EMOJI = /\p{Extended_Pictographic}\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*/gu;
+
+/** Emojis we can bend in neon (hearts, stars, crowns…) stay; the rest cannot be made, so they go. */
+export function makeableText(text: string): string {
+  return text.replace(EMOJI, (emoji) => (symbolFor(emoji) ? emoji : ''));
+}
 
 export interface DesignLine {
   text: string;
@@ -86,7 +92,7 @@ export const useStudio = create<StudioState & StudioActions>()(
       setLineText: (index, text) =>
         set((s) => ({
           lines: s.lines.map((line, i) =>
-            i === index ? { ...line, text: text.replace(EMOJI, '').slice(0, MAX_CHARS_PER_LINE) } : line,
+            i === index ? { ...line, text: makeableText(text).slice(0, MAX_CHARS_PER_LINE) } : line,
           ),
         })),
       addLine: () =>

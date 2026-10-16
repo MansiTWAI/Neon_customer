@@ -62,7 +62,7 @@ describe('emissiveFor', () => {
     const pink = emissiveFor(new Color('#ff2e88'));
     const cyan = emissiveFor(new Color('#22d3ee'));
     expect(pink).toBeGreaterThan(cyan);
-    expect(emissiveFor(new Color('#000010'))).toBeLessThanOrEqual(3.2);
+    expect(emissiveFor(new Color('#000010'))).toBeLessThanOrEqual(3.6);
     expect(emissiveFor(new Color('#ffffff'))).toBeGreaterThanOrEqual(0.8);
   });
 });

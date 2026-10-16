@@ -4,7 +4,6 @@ import { calculatePrice } from '@neon-adda/shared';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { takeHandoff } from '@/lib/studio-handoff';
 import type { StorefrontData } from '@/lib/studio-types';
 import type { DesignInput } from '@/lib/types';
 import { heightFor, useStudio } from '@/stores/studio-store';
@@ -14,6 +13,7 @@ import { LightSwitch } from './light-switch';
 import { LogoStudio } from './logo-studio';
 import type { Snapshot } from './neon-canvas';
 import { PriceBar } from './price-bar';
+import { useStudioSetup } from './use-studio-setup';
 
 const NeonCanvas = dynamic(() => import('./neon-canvas'), {
   ssr: false,
@@ -77,40 +77,11 @@ export function Studio({ data, mode, initialText, openHandoff, signedIn = false 
 function TextStudio({ data, initialText, openHandoff }: Omit<StudioProps, 'mode' | 'signedIn'>) {
   const { assets, rules, offline } = data;
   const studio = useStudio();
-  const [ready, setReady] = useState(false);
   const [fontRevision, setFontRevision] = useState(0);
   const snapshotRef = useRef<Snapshot | null>(null);
 
   const product = assets.products.find((p) => p.type === 'TEXT_NEON') ?? assets.products[0]!;
-
-  useEffect(() => {
-    const state = useStudio.getState();
-    state.reconcile({
-      fonts: assets.fonts.map((f) => f.family),
-      colorIds: assets.colors.map((c) => c.id),
-      backboards: assets.backboards.map((b) => b.code),
-    });
-
-    const handoff = openHandoff ? takeHandoff() : null;
-    if (handoff) {
-      const colorFor = (hex: string) =>
-        assets.colors.find((c) => c.glowHex.toUpperCase() === hex.toUpperCase())?.id ?? '';
-      state.load({
-        lines: handoff.lines.map((line) => ({ text: line.text, colorId: colorFor(line.glowHex) })),
-        fontFamily: assets.fonts.some((f) => f.family === handoff.fontFamily)
-          ? handoff.fontFamily
-          : undefined,
-        widthIn: handoff.widthIn,
-        backboardCode: assets.backboards.some((b) => b.code === handoff.backboardCode)
-          ? handoff.backboardCode
-          : undefined,
-        addonCodes: handoff.addonCodes?.filter((code) => assets.addons.some((a) => a.code === code)),
-      });
-    } else if (initialText) {
-      state.startWith(initialText);
-    }
-    setReady(true);
-  }, [assets, initialText, openHandoff]);
+  const ready = useStudioSetup(assets, { initialText, openHandoff });
 
   useEffect(() => {
     if (!studio.fontFamily) return;

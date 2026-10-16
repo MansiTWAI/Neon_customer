@@ -206,7 +206,7 @@ export function LogoStudio({ data, signedIn }: { data: StorefrontData; signedIn:
           {traced && (
             <button
               onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-neon-cyan hover:underline"
+              className="inline-flex items-center gap-2 text-sm font-semibold link"
             >
               <ImagePlus className="size-4" /> Use a different logo
             </button>
@@ -263,7 +263,7 @@ export function LogoStudio({ data, signedIn }: { data: StorefrontData; signedIn:
                   aria-pressed={backboardCode === board.code}
                   className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
                     backboardCode === board.code
-                      ? 'border-neon-pink bg-neon-pink/10'
+                      ? 'border-white/70 bg-white/[0.06]'
                       : 'border-white/10 hover:border-white/30'
                   }`}
                 >
@@ -282,7 +282,7 @@ export function LogoStudio({ data, signedIn }: { data: StorefrontData; signedIn:
                   onClick={() => setBackground(wall.code)}
                   className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
                     backgroundCode === wall.code
-                      ? 'border-neon-pink bg-neon-pink/15'
+                      ? 'border-white/70 bg-white/[0.06]'
                       : 'border-white/15 text-muted hover:text-ink'
                   }`}
                 >
@@ -294,7 +294,7 @@ export function LogoStudio({ data, signedIn }: { data: StorefrontData; signedIn:
                   onClick={() => setBackground(WALL_PHOTO)}
                   className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
                     backgroundCode === WALL_PHOTO
-                      ? 'border-neon-pink bg-neon-pink/15'
+                      ? 'border-white/70 bg-white/[0.06]'
                       : 'border-white/15 text-muted hover:text-ink'
                   }`}
                 >
@@ -348,7 +348,7 @@ export function LogoStudio({ data, signedIn }: { data: StorefrontData; signedIn:
               <p className="text-sm text-muted">
                 <Link
                   href={`/login?next=${encodeURIComponent('/studio?mode=logo')}`}
-                  className="font-semibold text-neon-cyan hover:underline"
+                  className="font-semibold link"
                 >
                   Sign in
                 </Link>{' '}

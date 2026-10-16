@@ -21,28 +21,28 @@ export default function ContactPage() {
         </p>
         <ul className="mt-8 space-y-5 text-sm">
           <li className="flex gap-3">
-            <Clock className="mt-0.5 size-5 shrink-0 text-neon-cyan" />
+            <Clock className="mt-0.5 size-5 shrink-0 text-ink/70" />
             <span>
               <span className="block font-semibold">Monday to Saturday, 10 am to 7 pm</span>
               <span className="text-muted">We reply within one working day.</span>
             </span>
           </li>
           <li className="flex gap-3">
-            <ReceiptText className="mt-0.5 size-5 shrink-0 text-neon-cyan" />
+            <ReceiptText className="mt-0.5 size-5 shrink-0 text-ink/70" />
             <span>
               <span className="block font-semibold">Need a price for something big?</span>
-              <Link href="/quote" className="text-neon-cyan hover:underline">
+              <Link href="/quote" className="link">
                 Request a quotation
               </Link>
             </span>
           </li>
           <li className="flex gap-3">
-            <MessageCircle className="mt-0.5 size-5 shrink-0 text-neon-cyan" />
+            <MessageCircle className="mt-0.5 size-5 shrink-0 text-ink/70" />
             <span>
               <span className="block font-semibold">About an existing order?</span>
               <span className="text-muted">
                 Open it from{' '}
-                <Link href="/account/orders" className="text-neon-cyan hover:underline">
+                <Link href="/account/orders" className="link">
                   your orders
                 </Link>{' '}
                 and choose Get help, so we have the details to hand.

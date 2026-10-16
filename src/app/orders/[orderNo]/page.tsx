@@ -161,7 +161,7 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
                         href={order.shipment.trackingUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="ml-2 inline-flex items-center gap-1 font-semibold text-neon-cyan hover:underline"
+                        className="ml-2 inline-flex items-center gap-1 font-semibold link"
                       >
                         Track <ExternalLink className="size-3.5" />
                       </a>
@@ -275,7 +275,7 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
                 href={invoice.url ?? '#'}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-4 flex items-center gap-2 text-sm font-semibold text-neon-cyan hover:underline"
+                className="mt-4 flex items-center gap-2 text-sm font-semibold link"
               >
                 <FileText className="size-4" /> Tax invoice {invoice.invoiceNo}
               </a>
