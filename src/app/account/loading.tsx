@@ -1,4 +1,8 @@
-/** Shown at once on navigation while the next page loads, so a tap never feels ignored. */
+/**
+ * Shown at once on navigation while the next page loads, so a tap never feels ignored. It lives on
+ * pages that never answer "not found": above a product or policy page it would send status 200
+ * before the page could say 404.
+ */
 export default function Loading() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10" aria-busy="true" aria-label="Loading">

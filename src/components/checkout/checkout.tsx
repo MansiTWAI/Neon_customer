@@ -1,7 +1,7 @@
 'use client';
 
 import { formatINR, type OrderPriceOk } from '@neon-adda/shared';
-import { Banknote, MapPin, Plus, ShoppingBag, Tag, X } from 'lucide-react';
+import { Banknote, CreditCard, MapPin, Plus, ShoppingBag, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { AddressForm } from '@/components/account/address-form';
@@ -10,6 +10,7 @@ import { Button, FormError, Notice } from '@/components/ui/form';
 import { SignThumb } from '@/components/ui/sign-thumb';
 import { ApiError, publicRequest } from '@/lib/api';
 import { api } from '@/lib/browser-api';
+import { payOnline, paymentErrorMessage } from '@/lib/online-payment';
 import { currentReferral } from '@/lib/referral';
 import { addressLines, formatSize } from '@/lib/format';
 import { letteringOf, type Address, type CheckoutPrice } from '@/lib/types';
@@ -30,6 +31,7 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
   );
   const [addingAddress, setAddingAddress] = useState(initialAddresses.length === 0);
   const [installation, setInstallation] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<'COD' | 'ONLINE'>('COD');
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [quote, setQuote] = useState<CheckoutPrice | null>(null);
   const [pricing, setPricing] = useState(false);
@@ -77,6 +79,8 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
   }, [pricingRequest, hydrated]);
 
   const price = quote?.price.status === 'OK' ? quote.price : null;
+  const onlineAvailable = Boolean(quote?.paymentMethods?.online);
+  const payingOnline = onlineAvailable && paymentMode === 'ONLINE';
 
   async function placeOrder() {
     if (!price || !address) return;
@@ -84,25 +88,39 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
     setError(null);
     setNotice(null);
     try {
-      const { orderNo } = await api.request<{ orderNo: string }>('/orders', {
-        method: 'POST',
-        body: JSON.stringify({
-          lines: items.map((item) => ({
-            design: item.design,
-            qty: item.qty,
-            // Ready-made signs show their catalogue photo in the cart; only designed signs send a picture.
-            preview: item.previewUrl?.startsWith('data:') ? item.previewUrl : undefined,
-          })),
-          addressId: address.id,
-          installation,
-          couponCode: couponCode ?? undefined,
-          paymentMode: 'COD',
-          referralCode: currentReferral(),
-          expectedPayablePaise: price.payablePaise,
-        }),
-      });
+      const { orderNo, paymentRequired } = await api.request<{ orderNo: string; paymentRequired: boolean }>(
+        '/orders',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            lines: items.map((item) => ({
+              design: item.design,
+              qty: item.qty,
+              // Ready-made signs show their catalogue photo in the cart; only designed signs send a picture.
+              preview: item.previewUrl?.startsWith('data:') ? item.previewUrl : undefined,
+            })),
+            addressId: address.id,
+            installation,
+            couponCode: couponCode ?? undefined,
+            paymentMode: payingOnline ? 'ONLINE' : 'COD',
+            referralCode: currentReferral(),
+            expectedPayablePaise: price.payablePaise,
+          }),
+        },
+      );
       clear();
-      router.replace(`/orders/${orderNo}?placed=1`);
+      if (!paymentRequired) {
+        router.replace(`/orders/${orderNo}?placed=1`);
+        return;
+      }
+      // The order is saved first, so closing the payment window loses nothing: it can be paid from the order page.
+      const outcome = await payOnline(orderNo).catch((err: unknown) => {
+        setError(paymentErrorMessage(err));
+        return 'cancelled' as const;
+      });
+      router.replace(
+        outcome === 'paid' ? `/orders/${orderNo}?placed=1` : `/orders/${orderNo}?payment=${outcome}`,
+      );
     } catch (err) {
       setPlacing(false);
       if (err instanceof ApiError && err.code === 'PRICE_CHANGED') {
@@ -231,18 +249,37 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
         </Step>
 
         <Step number={3} title="Payment">
-          <div className="flex gap-3 rounded-xl border border-neon-pink bg-neon-pink/5 p-4 text-sm">
-            <Banknote className="mt-0.5 size-5 shrink-0 text-neon-pink" />
-            <span>
-              <span className="block font-semibold">
-                Cash on delivery{price ? `, ${formatINR(price.payablePaise)}` : ''}
+          {onlineAvailable ? (
+            <div role="radiogroup" aria-label="Payment" className="space-y-3 text-sm">
+              <PaymentChoice
+                checked={paymentMode === 'ONLINE'}
+                onSelect={() => setPaymentMode('ONLINE')}
+                icon={CreditCard}
+                title={`Pay now${price ? `, ${formatINR(price.payablePaise)}` : ''}`}
+                detail="UPI, cards, net banking or wallets, through Razorpay. We start on your sign once it is paid."
+              />
+              <PaymentChoice
+                checked={paymentMode === 'COD'}
+                onSelect={() => setPaymentMode('COD')}
+                icon={Banknote}
+                title="Cash on delivery"
+                detail="Pay in cash or by UPI when your sign arrives."
+              />
+            </div>
+          ) : (
+            <div className="flex gap-3 rounded-xl border border-neon-pink bg-neon-pink/5 p-4 text-sm">
+              <Banknote className="mt-0.5 size-5 shrink-0 text-neon-pink" />
+              <span>
+                <span className="block font-semibold">
+                  Cash on delivery{price ? `, ${formatINR(price.payablePaise)}` : ''}
+                </span>
+                <span className="mt-0.5 block text-muted">
+                  Pay in cash or by UPI when your sign arrives. We start making it as soon as you place the
+                  order.
+                </span>
               </span>
-              <span className="mt-0.5 block text-muted">
-                Pay in cash or by UPI when your sign arrives. We start making it as soon as you place the
-                order.
-              </span>
-            </span>
-          </div>
+            </div>
+          )}
         </Step>
       </div>
 
@@ -292,7 +329,7 @@ export function Checkout({ addresses: initialAddresses, customer }: CheckoutProp
         <FormError message={error} />
 
         <Button onClick={placeOrder} pending={placing} disabled={!canPlace} className="w-full">
-          Place order
+          {payingOnline ? `Pay ${price ? `${formatINR(price.payablePaise)} ` : ''}now` : 'Place order'}
         </Button>
         {!address && <p className="text-center text-xs text-muted">Add a delivery address to continue.</p>}
         <p className="text-center text-xs text-muted">
@@ -314,6 +351,36 @@ function Step({ number, title, children }: { number: number; title: string; chil
       </h2>
       {children}
     </section>
+  );
+}
+
+function PaymentChoice(props: {
+  checked: boolean;
+  onSelect: () => void;
+  icon: typeof Banknote;
+  title: string;
+  detail: string;
+}) {
+  const Icon = props.icon;
+  return (
+    <label
+      className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
+        props.checked ? 'border-neon-pink bg-neon-pink/5' : 'border-white/10 hover:border-white/30'
+      }`}
+    >
+      <input
+        type="radio"
+        name="payment"
+        checked={props.checked}
+        onChange={props.onSelect}
+        className="sr-only"
+      />
+      <Icon className={`mt-0.5 size-5 shrink-0 ${props.checked ? 'text-neon-pink' : 'text-muted'}`} />
+      <span>
+        <span className="block font-semibold">{props.title}</span>
+        <span className="mt-0.5 block text-muted">{props.detail}</span>
+      </span>
+    </label>
   );
 }
 

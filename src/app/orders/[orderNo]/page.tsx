@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CancelOrder, ReviewForm, SupportForm } from '@/components/orders/order-actions';
+import { PayNow } from '@/components/orders/pay-now';
 import { OrderTimeline } from '@/components/orders/order-timeline';
 import { ProofReview } from '@/components/orders/proof-review';
 import { Badge, Card, CardTitle } from '@/components/ui/card';
@@ -26,7 +27,7 @@ import type { OrderDetail } from '@/lib/types';
 
 interface OrderPageProps {
   params: Promise<{ orderNo: string }>;
-  searchParams: Promise<{ placed?: string }>;
+  searchParams: Promise<{ placed?: string; payment?: string }>;
 }
 
 export async function generateMetadata({ params }: OrderPageProps): Promise<Metadata> {
@@ -43,11 +44,14 @@ async function loadOrder(orderNo: string): Promise<OrderDetail> {
 }
 
 export default async function OrderPage({ params, searchParams }: OrderPageProps) {
-  const [{ orderNo }, { placed }] = await Promise.all([params, searchParams]);
+  const [{ orderNo }, { placed, payment }] = await Promise.all([params, searchParams]);
   const order = await loadOrder(orderNo);
-  const status = ORDER_STATUS[order.status];
   const { totals } = order;
   const awaitingPayment = order.status === 'PENDING_PAYMENT';
+  const status =
+    awaitingPayment && order.paymentMode !== 'COD'
+      ? { ...ORDER_STATUS[order.status], label: 'Awaiting payment' }
+      : ORDER_STATUS[order.status];
   const payOnDelivery =
     order.paymentMode === 'COD' &&
     totals.duePaise > 0 &&
@@ -89,10 +93,23 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
         </Card>
       )}
 
-      {awaitingPayment && (
+      {awaitingPayment &&
+        (order.paymentMode === 'COD' ? (
+          <Notice tone="warning">
+            Our team will call {formatPhone(order.shippingAddress.phone)} to confirm this order before we
+            start making it.
+          </Notice>
+        ) : (
+          <PayNow
+            orderNo={order.orderNo}
+            duePaise={totals.duePaise}
+            expiresAt={order.expiresAt ?? null}
+            initialOutcome={payment}
+          />
+        ))}
+      {order.status === 'EXPIRED' && order.paymentMode !== 'COD' && (
         <Notice tone="warning">
-          Our team will call {formatPhone(order.shippingAddress.phone)} to confirm this order before we start
-          making it.
+          This order was not paid in time, so it was not placed. Add the sign to your cart again to order it.
         </Notice>
       )}
       {order.installation?.completionCode && (

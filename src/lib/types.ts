@@ -114,6 +114,8 @@ export interface CheckoutPrice {
   coupon: { code: string; applied: boolean; message: string | null } | null;
   zone: { name: string; installationAvailable: boolean } | null;
   minOrderValuePaise: number;
+  /** Cash on delivery is always there; online only once the payment gateway is set up. */
+  paymentMethods?: { cod: boolean; online: boolean };
   lines: { description: string; quoteOnly: boolean }[];
 }
 
@@ -149,6 +151,7 @@ export interface OrderDetail {
   status: OrderStatus;
   paymentStatus: OrderPaymentStatus;
   paymentMode: 'FULL' | 'ADVANCE' | 'COD';
+  expiresAt?: string | null;
   placedAt: string;
   cancelledAt: string | null;
   cancelReason: string | null;

@@ -42,7 +42,7 @@ import type { Backboard, Lighting, NeonDesign, WallId } from '@/lib/neon-rendere
 import { NEON_SYMBOLS, SYMBOL_CHARACTERS } from '@/lib/neon-symbols';
 import type { StorefrontData, StudioBackboard } from '@/lib/studio-types';
 import type { DesignInput } from '@/lib/types';
-import { heightFor, MAX_CHARS_PER_LINE, MAX_LINES, useStudio } from '@/stores/studio-store';
+import { heightFor, makeableText, MAX_CHARS_PER_LINE, MAX_LINES, useStudio } from '@/stores/studio-store';
 import type { NeonSign3DHandle } from './neon-sign-3d';
 
 // Three.js is large, so the 3D view loads only in the browser and only on this page.
@@ -642,6 +642,16 @@ function WordsStep({
   const { lines, setLineText, addLine, removeLine } = useStudio();
   const fields = useRef<(HTMLInputElement | null)[]>([]);
   const [target, setTarget] = useState(0);
+  // Emojis that cannot be bent in neon are taken out as they are typed; say which, so it is not a mystery.
+  const [leftOut, setLeftOut] = useState<string[]>([]);
+
+  function type(index: number, value: string) {
+    const kept = makeableText(value);
+    const removed =
+      value.match(/\p{Extended_Pictographic}\uFE0F?/gu)?.filter((emoji) => !kept.includes(emoji)) ?? [];
+    setLeftOut(removed);
+    setLineText(index, value);
+  }
 
   function insert(symbol: string) {
     const index = Math.min(target, lines.length - 1);
@@ -671,7 +681,7 @@ function WordsStep({
               value={line.text}
               maxLength={MAX_CHARS_PER_LINE}
               onFocus={() => setTarget(i)}
-              onChange={(e) => setLineText(i, e.target.value)}
+              onChange={(e) => type(i, e.target.value)}
               placeholder={i === 0 ? 'Type your name or words' : `Line ${i + 1}`}
               className="w-full min-w-0 rounded-xl border border-white/10 bg-night-900 px-3 py-2.5 text-base outline-none focus:border-neon-cyan"
             />
@@ -687,6 +697,12 @@ function WordsStep({
             )}
           </div>
         ))}
+        {leftOut.length > 0 && (
+          <p role="status" className="text-xs text-amber-300">
+            {leftOut.join(' ')} cannot be made in neon, so {leftOut.length === 1 ? 'it was' : 'they were'}{' '}
+            left out. Try a neon symbol below.
+          </p>
+        )}
         <div className="flex items-center justify-between text-xs text-muted">
           <span>
             Up to {MAX_LINES} lines of {MAX_CHARS_PER_LINE} characters

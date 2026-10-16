@@ -20,9 +20,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: UsePageProps): Promise<Metadata> {
   const use = (await params).use;
   const page = USE_CASES[use];
-  return page
-    ? { title: page.title, description: page.intro, alternates: { canonical: `/neon-for/${use}` } }
-    : {};
+  // Decided here, before the page streams behind loading.tsx, so a missing page answers 404, not 200.
+  if (!page) notFound();
+  return { title: page.title, description: page.intro, alternates: { canonical: `/neon-for/${use}` } };
 }
 
 export default async function UsePage({ params }: UsePageProps) {

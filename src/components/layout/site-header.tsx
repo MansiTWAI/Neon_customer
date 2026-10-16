@@ -27,7 +27,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-white/5 bg-night-900/80 backdrop-blur">
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-4" aria-label="Main">
-        <Link href="/" className="font-display text-lg font-bold tracking-wide">
+        <Link href="/" aria-label="Neon Adda home" className="font-display text-lg font-bold tracking-wide">
           <span className="neon-text">NEON</span> ADDA
         </Link>
         <div className="hidden items-center gap-6 text-sm text-muted md:flex">

@@ -16,7 +16,8 @@ interface ProductPageProps {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const product = await fetchProduct((await params).slug);
-  if (!product) return {};
+  // Decided here, before the page streams behind loading.tsx, so a missing page answers 404, not 200.
+  if (!product?.design || !product.sizes.length || !product.backboards.length) notFound();
   return {
     title: `${product.name} neon sign`,
     description: product.description ?? `${product.name} LED neon sign, handmade and delivered across India.`,

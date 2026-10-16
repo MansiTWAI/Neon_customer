@@ -118,6 +118,7 @@ describe('NeonDesigner', () => {
     await waitFor(() => expect((line as HTMLInputElement).value).toBe('Riya👑'));
     fireEvent.change(line, { target: { value: 'Riya 🦄⭐' } });
     expect((line as HTMLInputElement).value).toBe('Riya ⭐');
+    expect(screen.getByRole('status').textContent).toContain('🦄 cannot be made in neon');
   });
 
   it('prices the sign by the rate card, sized from the 3D lettering, and adds the full design to the cart', async () => {

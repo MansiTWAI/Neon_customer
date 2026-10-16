@@ -14,9 +14,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PolicyPageProps): Promise<Metadata> {
   const slug = (await params).slug;
   const policy = POLICIES[slug];
-  return policy
-    ? { title: policy.title, description: policy.summary, alternates: { canonical: `/policies/${slug}` } }
-    : {};
+  // Decided here, before the page streams behind loading.tsx, so a missing page answers 404, not 200.
+  if (!policy) notFound();
+  return { title: policy.title, description: policy.summary, alternates: { canonical: `/policies/${slug}` } };
 }
 
 export default async function PolicyPage({ params }: PolicyPageProps) {

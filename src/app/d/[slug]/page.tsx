@@ -12,7 +12,8 @@ interface SharedDesignPageProps {
 
 export async function generateMetadata({ params }: SharedDesignPageProps): Promise<Metadata> {
   const shared = await fetchSharedDesign((await params).slug);
-  if (!shared) return {};
+  // Decided here, before the page streams behind loading.tsx, so a missing page answers 404, not 200.
+  if (!shared) notFound();
   return {
     title: `${shared.name} in neon`,
     description: 'A custom neon sign designed on Neon Adda. Open it in the designer to make it yours.',
